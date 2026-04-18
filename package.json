@@ -1,6 +1,6 @@
 {
   "name": "@fangoling/ai-terminal-assistant",
-  "version": "1.70.0",
+  "version": "0.1.0",
   "description": "EduIDE Terminal Assistant Extension",
   "dependencies": {
     "@theia/ai-core": "1.70.0",
