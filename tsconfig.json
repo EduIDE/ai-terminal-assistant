@@ -1,40 +1,30 @@
 {
-  "extends": "../../configs/base.tsconfig",
   "compilerOptions": {
-    "composite": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noImplicitAny": true,
+    "noEmitOnError": false,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "strictNullChecks": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "downlevelIteration": true,
+    "resolveJsonModule": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2017",
+    "jsx": "react",
+    "lib": [
+      "ES2017",
+      "dom"
+    ],
+    "sourceMap": true,
     "rootDir": "src",
     "outDir": "lib"
   },
   "include": [
     "src"
-  ],
-  "references": [
-    {
-      "path": "../ai-core"
-    },
-    {
-      "path": "../core"
-    },
-    {
-      "path": "../debug"
-    },
-    {
-      "path": "../file-search"
-    },
-    {
-      "path": "../filesystem"
-    },
-    {
-      "path": "../monaco"
-    },
-    {
-      "path": "../task"
-    },
-    {
-      "path": "../terminal"
-    },
-    {
-      "path": "../workspace"
-    }
   ]
 }
