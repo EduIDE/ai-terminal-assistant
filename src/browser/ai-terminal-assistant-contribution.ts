@@ -14,26 +14,41 @@
 // SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0
 // *****************************************************************************
 
-import { inject, injectable, postConstruct } from '@theia/core/shared/inversify';
+import {
+    inject,
+    injectable,
+    postConstruct,
+} from '@theia/core/shared/inversify';
 import { TerminalService } from '@theia/terminal/lib/browser/base/terminal-service';
 import { AiTerminalSummaryAgent } from './terminal-output-analysis-agent';
 import { ENABLE_AI_CONTEXT_KEY } from '@theia/ai-core/lib/browser';
 import { AICommandHandlerFactory } from '@theia/ai-core/lib/browser/ai-command-handler-factory';
 import { AgentService } from '@theia/ai-core';
-import { AbstractViewContribution, codicon, FrontendApplicationContribution, KeybindingRegistry } from '@theia/core/lib/browser';
+import {
+    AbstractViewContribution,
+    codicon,
+    FrontendApplicationContribution,
+    KeybindingRegistry,
+} from '@theia/core/lib/browser';
 import { Command, CommandRegistry, MenuModelRegistry, nls } from '@theia/core';
-import { TerminalCommands, TerminalMenus } from '@theia/terminal/lib/browser/terminal-frontend-contribution';
+import {
+    TerminalCommands,
+    TerminalMenus,
+} from '@theia/terminal/lib/browser/terminal-frontend-contribution';
 import { SummaryService } from './ai-terminal-assistant-service';
 import { AiTerminalAssistantPreferences } from './ai-terminal-assistant-preferences';
 import { AiTerminalAssistantViewWidget } from './ai-terminal-assistant-view-widget';
 
 export const AI_TERMINAL_SUMMARY_TOGGLE_COMMAND_ID = 'aiTerminalSummary:toggle';
 
-const AI_TERMINAL_SUMMARY_COMMAND = Command.toLocalizedCommand({
-    id: 'ai-terminal-output-summary:toggle',
-    label: nls.localize('', 'New AI Terminal Assistant'),
-    iconClass: codicon('sparkle')
-}, 'theia/ai/terminal/summarize');
+const AI_TERMINAL_SUMMARY_COMMAND = Command.toLocalizedCommand(
+    {
+        id: 'ai-terminal-output-summary:toggle',
+        label: nls.localize('', 'New AI Terminal Assistant'),
+        iconClass: codicon('sparkle'),
+    },
+    'theia/ai/terminal/summarize',
+);
 
 /**
  * Contribution for the AI Terminal Assistant widget.
@@ -41,9 +56,10 @@ const AI_TERMINAL_SUMMARY_COMMAND = Command.toLocalizedCommand({
  * Implements FrontendApplicationContribution for lifecycle hooks.
  */
 @injectable()
-export class AiTerminalAssistantContribution extends AbstractViewContribution<AiTerminalAssistantViewWidget>
-    implements FrontendApplicationContribution {
-
+export class AiTerminalAssistantContribution
+    extends AbstractViewContribution<AiTerminalAssistantViewWidget>
+    implements FrontendApplicationContribution
+{
     @inject(TerminalService)
     protected terminalService: TerminalService;
 
@@ -69,10 +85,10 @@ export class AiTerminalAssistantContribution extends AbstractViewContribution<Ai
             defaultWidgetOptions: {
                 area: 'bottom',
                 mode: 'split-right',
-                rank: 500
+                rank: 500,
             },
             toggleCommandId: AI_TERMINAL_SUMMARY_TOGGLE_COMMAND_ID,
-            toggleKeybinding: 'ctrlcmd+shift+t'
+            toggleKeybinding: 'ctrlcmd+shift+t',
         });
     }
 
@@ -92,14 +108,17 @@ export class AiTerminalAssistantContribution extends AbstractViewContribution<Ai
 
     override registerMenus(menus: MenuModelRegistry): void {
         super.registerMenus(menus);
-        menus.registerMenuAction([...TerminalMenus.TERMINAL_CONTEXT_MENU, '_5'], {
-            when: ENABLE_AI_CONTEXT_KEY,
-            commandId: AI_TERMINAL_SUMMARY_COMMAND.id,
-        });
+        menus.registerMenuAction(
+            [...TerminalMenus.TERMINAL_CONTEXT_MENU, '_5'],
+            {
+                when: ENABLE_AI_CONTEXT_KEY,
+                commandId: AI_TERMINAL_SUMMARY_COMMAND.id,
+            },
+        );
         menus.registerMenuAction([...TerminalMenus.TERMINAL_NEW], {
             when: ENABLE_AI_CONTEXT_KEY,
             commandId: AI_TERMINAL_SUMMARY_COMMAND.id,
-            order: '4'
+            order: '4',
         });
     }
 
@@ -109,14 +128,21 @@ export class AiTerminalAssistantContribution extends AbstractViewContribution<Ai
 
     override registerCommands(commands: CommandRegistry): void {
         super.registerCommands(commands);
-        commands.registerCommand(AI_TERMINAL_SUMMARY_COMMAND, this.commandHandlerFactory({
-            execute: async () => {
-                const widget = await this.openView({ activate: true });
-                widget.title.closable = true;
-                widget.title.label = nls.localize('theia/ai/terminal/summaryTitle', 'AI Terminal Assistant');
-            },
-            isEnabled: () => this.agentService.isEnabled(this.terminalAgent.id)
-        }));
+        commands.registerCommand(
+            AI_TERMINAL_SUMMARY_COMMAND,
+            this.commandHandlerFactory({
+                execute: async () => {
+                    const widget = await this.openView({ activate: true });
+                    widget.title.closable = true;
+                    widget.title.label = nls.localize(
+                        'theia/ai/terminal/summaryTitle',
+                        'AI Terminal Assistant',
+                    );
+                },
+                isEnabled: () =>
+                    this.agentService.isEnabled(this.terminalAgent.id),
+            }),
+        );
 
         // In standalone mode, intercept terminal creation commands and redirect to the AI terminal panel.
         // registerHandler uses unshift, so these handlers have higher priority than the terminal package's handlers.
@@ -125,12 +151,24 @@ export class AiTerminalAssistantContribution extends AbstractViewContribution<Ai
         const redirectToAiPanel = async () => {
             const widget = await this.openView({ activate: true });
             widget.title.closable = true;
-            widget.title.label = nls.localize('theia/ai/terminal/summaryTitle', 'AI Terminal Assistant');
+            widget.title.label = nls.localize(
+                'theia/ai/terminal/summaryTitle',
+                'AI Terminal Assistant',
+            );
         };
-        const standaloneOnly = { isEnabled: () => this.isStandaloneMode, execute: redirectToAiPanel };
+        const standaloneOnly = {
+            isEnabled: () => this.isStandaloneMode,
+            execute: redirectToAiPanel,
+        };
         commands.registerHandler(TerminalCommands.NEW.id, standaloneOnly);
-        commands.registerHandler(TerminalCommands.PROFILE_NEW.id, standaloneOnly);
-        commands.registerHandler(TerminalCommands.NEW_ACTIVE_WORKSPACE.id, standaloneOnly);
+        commands.registerHandler(
+            TerminalCommands.PROFILE_NEW.id,
+            standaloneOnly,
+        );
+        commands.registerHandler(
+            TerminalCommands.NEW_ACTIVE_WORKSPACE.id,
+            standaloneOnly,
+        );
         commands.registerHandler(TerminalCommands.SPLIT.id, standaloneOnly);
     }
 
@@ -139,8 +177,7 @@ export class AiTerminalAssistantContribution extends AbstractViewContribution<Ai
         keybindings.registerKeybinding({
             command: AI_TERMINAL_SUMMARY_COMMAND.id,
             keybinding: 'ctrlcmd+e',
-            when: `terminalFocus && ${ENABLE_AI_CONTEXT_KEY}`
+            when: `terminalFocus && ${ENABLE_AI_CONTEXT_KEY}`,
         });
     }
-
 }

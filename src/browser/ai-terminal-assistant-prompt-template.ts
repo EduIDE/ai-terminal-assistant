@@ -291,8 +291,8 @@ cwd: "/home/user/project/bar"
 \`\`\`
 
 
-`
-        }
+`,
+        },
     },
     {
         id: 'terminal-summary-user',
@@ -306,7 +306,7 @@ recent-terminal-contents:
 user-request: {{userRequest}}
 shell: {{shell}}
 cwd: {{cwd}}
-`
-        }
-    }
+`,
+        },
+    },
 ];

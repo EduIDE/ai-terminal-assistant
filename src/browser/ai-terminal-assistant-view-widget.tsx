@@ -70,13 +70,15 @@ export class AiTerminalAssistantViewWidget extends BaseWidget {
     protected init(): void {
         this.toDispose.pushAll([
             this.summaryViewWidget,
-            this.aiTerminalBufferWidget
+            this.aiTerminalBufferWidget,
         ]);
 
-        this._isStandAlone = this.aiTerminalAssistantPreferences['terminal.aiAssistant.mode'] === 'standalone';
+        this._isStandAlone =
+            this.aiTerminalAssistantPreferences['terminal.aiAssistant.mode'] ===
+            'standalone';
 
         this.update();
-        const layout = this.layout = new PanelLayout();
+        const layout = (this.layout = new PanelLayout());
         layout.addWidget(this.summaryViewWidget);
         if (this._isStandAlone) {
             layout.addWidget(this.aiTerminalBufferWidget);
@@ -84,30 +86,37 @@ export class AiTerminalAssistantViewWidget extends BaseWidget {
 
         this.toDispose.push(
             // Listen to summary changes to update border
-            this.summaryService.onSummaryRequestFinished((summary: Summary | undefined) => {
-                this.updateBorderClass(summary);
-            }),
+            this.summaryService.onSummaryRequestFinished(
+                (summary: Summary | undefined) => {
+                    this.updateBorderClass(summary);
+                },
+            ),
         );
 
         this.toDispose.push(
-            this.aiTerminalAssistantPreferences.onPreferenceChanged(event => {
+            this.aiTerminalAssistantPreferences.onPreferenceChanged((event) => {
                 if (event.preferenceName === 'terminal.aiAssistant.mode') {
-                    this._isStandAlone = this.aiTerminalAssistantPreferences['terminal.aiAssistant.mode'] === 'standalone';
+                    this._isStandAlone =
+                        this.aiTerminalAssistantPreferences[
+                            'terminal.aiAssistant.mode'
+                        ] === 'standalone';
                     this.update();
                 }
-            })
+            }),
         );
 
         // Set initial border state
         this.updateBorderClass(this.summaryService.currentSummary);
 
-        this._resizeObserver = new ResizeObserver(entries => {
+        this._resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 this.updateLayoutClass(entry.contentRect.width);
             }
         });
         this._resizeObserver.observe(this.node);
-        this.toDispose.push({ dispose: () => this._resizeObserver?.disconnect() });
+        this.toDispose.push({
+            dispose: () => this._resizeObserver?.disconnect(),
+        });
     }
 
     protected updateLayoutClass(width: number): void {
@@ -124,10 +133,11 @@ export class AiTerminalAssistantViewWidget extends BaseWidget {
         this.removeClass('neutral-border');
 
         if (summary) {
-            this.addClass(summary.isSuccessful ? 'success-border' : 'error-border');
+            this.addClass(
+                summary.isSuccessful ? 'success-border' : 'error-border',
+            );
         } else {
             this.addClass('neutral-border');
         }
     }
-
 }

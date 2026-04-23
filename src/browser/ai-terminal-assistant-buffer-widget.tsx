@@ -14,7 +14,11 @@
 // SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0
 // *****************************************************************************
 import * as React from '@theia/core/shared/react';
-import { inject, injectable, postConstruct } from '@theia/core/shared/inversify';
+import {
+    inject,
+    injectable,
+    postConstruct,
+} from '@theia/core/shared/inversify';
 import { codicon, ReactWidget } from '@theia/core/lib/browser';
 import { SummaryService } from './ai-terminal-assistant-service';
 import { nls } from '@theia/core/lib/common/nls';
@@ -25,9 +29,11 @@ import { nls } from '@theia/core/lib/common/nls';
  */
 @injectable()
 export class AiTerminalBufferWidget extends ReactWidget {
-
     public static ID = 'ai-terminal-buffer-widget';
-    static LABEL = nls.localize('theia/ai/terminal/buffer/label', 'Terminal Buffer');
+    static LABEL = nls.localize(
+        'theia/ai/terminal/buffer/label',
+        'Terminal Buffer',
+    );
 
     @inject(SummaryService)
     protected readonly summaryService: SummaryService;
@@ -48,19 +54,17 @@ export class AiTerminalBufferWidget extends ReactWidget {
     }
 
     protected override render(): React.ReactNode {
-        return (
-            <AiTerminalBuffer summaryService={this.summaryService} />
-        );
+        return <AiTerminalBuffer summaryService={this.summaryService} />;
     }
-
 }
 
 interface AiTerminalBufferProps {
     summaryService: SummaryService;
 }
 
-const AiTerminalBuffer: React.FunctionComponent<AiTerminalBufferProps> = ({ summaryService }: AiTerminalBufferProps) => {
-
+const AiTerminalBuffer: React.FunctionComponent<AiTerminalBufferProps> = ({
+    summaryService,
+}: AiTerminalBufferProps) => {
     const { buffer, isInputDisabled } = useTerminalBuffer(summaryService);
     const [inputCommand, setInputCommand] = React.useState<string>('');
 
@@ -71,36 +75,30 @@ const AiTerminalBuffer: React.FunctionComponent<AiTerminalBufferProps> = ({ summ
         }
     }, [inputCommand, summaryService]);
 
-    // const handleToggleTerminalVisibility = React.useCallback(() => {
-    //     summaryService.toggleTerminalVisibility();
-    // }, [summaryService]);
-
     return (
         <div className='ai-terminal-buffer-inner'>
-             {/*<button className='theia-button secondary toggle-terminal-visibility-button' onClick={handleToggleTerminalVisibility}>
-                Toggle Terminal Visibility
-            </button>*/}
             <div className='ai-terminal-buffer-content'>
                 <div className='ai-terminal-buffer-container'>
                     {buffer.map((line, index) => (
-                        <p
-                            key={index}
-                            className='ai-terminal-command-line'
-                        >{line}</p>
+                        <p key={index} className='ai-terminal-command-line'>
+                            {line}
+                        </p>
                     ))}
                 </div>
-                <form className='ai-terminal-input-form' onSubmit={e => (
-                    e.preventDefault(),
-                    handleExecuteTerminalCommand()
-                )
-                }>
+                <form
+                    className='ai-terminal-input-form'
+                    onSubmit={(e) => (
+                        e.preventDefault(),
+                        handleExecuteTerminalCommand()
+                    )}
+                >
                     <input
                         className='ai-terminal-input-field'
                         name='commandInput'
                         value={inputCommand}
                         placeholder='Enter command: '
                         disabled={isInputDisabled}
-                        onChange={e => setInputCommand(e.target.value)}
+                        onChange={(e) => setInputCommand(e.target.value)}
                         autoComplete='off'
                     />
                 </form>
@@ -118,14 +116,13 @@ function useTerminalBuffer(summaryService: SummaryService): {
 
     const fetchBuffer = React.useCallback(async () => {
         const bufferContent = await summaryService.getBufferContent();
-        console.log('Fetched terminal buffer content:', bufferContent);
-        setBuffer(bufferContent.reverse().filter(line => line.trim() !== ''));
+        setBuffer(bufferContent.reverse().filter((line) => line.trim() !== ''));
     }, [summaryService]);
 
     React.useEffect(() => {
         fetchBuffer();
-        const dispose = summaryService.onCurrentTerminalBufferChanged(fetchBuffer);
-        console.log('Subscribed to terminal changes for buffer fetching.');
+        const dispose =
+            summaryService.onCurrentTerminalBufferChanged(fetchBuffer);
         return () => dispose.dispose();
     }, [summaryService, fetchBuffer]);
 
@@ -138,8 +135,12 @@ function useTerminalBuffer(summaryService: SummaryService): {
     }, [summaryService]);
 
     React.useEffect(() => {
-        const onTaskStartedDisposable = summaryService.onTaskStarted(updateInputDisabledStateToEnabled);
-        const onTaskExitedDisposable = summaryService.onTaskExited(updateInputDisabledStateToDisabled);
+        const onTaskStartedDisposable = summaryService.onTaskStarted(
+            updateInputDisabledStateToEnabled,
+        );
+        const onTaskExitedDisposable = summaryService.onTaskExited(
+            updateInputDisabledStateToDisabled,
+        );
         return () => {
             onTaskStartedDisposable.dispose();
             onTaskExitedDisposable.dispose();

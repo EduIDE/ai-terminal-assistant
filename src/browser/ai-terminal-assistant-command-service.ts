@@ -14,14 +14,20 @@
 // SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0
 // *****************************************************************************
 import { Command, CommandRegistry } from '@theia/core';
-import { inject, injectable, postConstruct } from '@theia/core/shared/inversify';
+import {
+    inject,
+    injectable,
+    postConstruct,
+} from '@theia/core/shared/inversify';
 
 export interface AiTerminalAssistantCommandService {
     commands: Command[];
     executeCommand(commandId: string, ctx: any): void;
 }
 
-export const AiTerminalAssistantCommandService = Symbol('AiTerminalAssistantCommandService');
+export const AiTerminalAssistantCommandService = Symbol(
+    'AiTerminalAssistantCommandService',
+);
 
 @injectable()
 export class AiTerminalAssistantCommandServiceImpl implements AiTerminalAssistantCommandService {
@@ -41,6 +47,8 @@ export class AiTerminalAssistantCommandServiceImpl implements AiTerminalAssistan
 
     protected getAiTerminalAssistantCommands(): Command[] {
         const commands = this.commandRegistry.commands;
-        return commands.filter(command => command.category === 'Ai Terminal Assistant');
+        return commands.filter(
+            (command) => command.category === 'Ai Terminal Assistant',
+        );
     }
 }

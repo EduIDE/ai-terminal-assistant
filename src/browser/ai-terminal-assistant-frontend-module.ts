@@ -17,26 +17,38 @@
 import '../../src/browser/style/ai-terminal-assistant.css';
 import '../../src/browser/style/monaco-decorations.css';
 import { Agent } from '@theia/ai-core/lib/common';
-import { bindViewContribution, FrontendApplicationContribution, WidgetFactory } from '@theia/core/lib/browser';
+import {
+    bindViewContribution,
+    FrontendApplicationContribution,
+    WidgetFactory,
+} from '@theia/core/lib/browser';
 import { ContainerModule } from '@theia/core/shared/inversify';
 import { AiTerminalSummaryAgent } from './terminal-output-analysis-agent';
 import { AiTerminalAssistantContribution } from './ai-terminal-assistant-contribution';
-import { SummaryServiceImpl, SummaryService } from './ai-terminal-assistant-service';
+import {
+    SummaryServiceImpl,
+    SummaryService,
+} from './ai-terminal-assistant-service';
 import { ErrorSourceResolutionService } from './error-source-resolution-service';
-import { AiTerminalAssistantCommandService, AiTerminalAssistantCommandServiceImpl } from './ai-terminal-assistant-command-service';
+import {
+    AiTerminalAssistantCommandService,
+    AiTerminalAssistantCommandServiceImpl,
+} from './ai-terminal-assistant-command-service';
 import { AiTerminalAssistantViewWidget } from './ai-terminal-assistant-view-widget';
 import { SummaryViewWidget } from './ai-terminal-assistant-summary-widget';
 import { AiTerminalBufferWidget } from './ai-terminal-assistant-buffer-widget';
-import {  bindAiTerminalAssistantPreferences } from './ai-terminal-assistant-preferences';
+import { bindAiTerminalAssistantPreferences } from './ai-terminal-assistant-preferences';
 
-export default new ContainerModule(bind => {
+export default new ContainerModule((bind) => {
     // Services
     bind(ErrorSourceResolutionService).toSelf().inSingletonScope();
     bind(SummaryServiceImpl).toSelf().inSingletonScope();
     bind(SummaryService).toService(SummaryServiceImpl);
 
     bind(AiTerminalAssistantCommandServiceImpl).toSelf().inSingletonScope();
-    bind(AiTerminalAssistantCommandService).toService(AiTerminalAssistantCommandServiceImpl);
+    bind(AiTerminalAssistantCommandService).toService(
+        AiTerminalAssistantCommandServiceImpl,
+    );
 
     // Agent
     bind(AiTerminalSummaryAgent).toSelf().inSingletonScope();
@@ -44,26 +56,37 @@ export default new ContainerModule(bind => {
 
     // Widgets
     bind(AiTerminalBufferWidget).toSelf();
-    bind(WidgetFactory).toDynamicValue(({ container }) => ({
-        id: AiTerminalBufferWidget.ID,
-        createWidget: () => container.get(AiTerminalBufferWidget)
-    })).inSingletonScope();
+    bind(WidgetFactory)
+        .toDynamicValue(({ container }) => ({
+            id: AiTerminalBufferWidget.ID,
+            createWidget: () => container.get(AiTerminalBufferWidget),
+        }))
+        .inSingletonScope();
 
     bind(SummaryViewWidget).toSelf();
-    bind(WidgetFactory).toDynamicValue(({ container }) => ({
-        id: SummaryViewWidget.ID,
-        createWidget: () => container.get(SummaryViewWidget)
-    })).inSingletonScope();
+    bind(WidgetFactory)
+        .toDynamicValue(({ container }) => ({
+            id: SummaryViewWidget.ID,
+            createWidget: () => container.get(SummaryViewWidget),
+        }))
+        .inSingletonScope();
 
     bind(AiTerminalAssistantViewWidget).toSelf();
-    bind(WidgetFactory).toDynamicValue(ctx => ({
-        id: AiTerminalAssistantViewWidget.ID,
-        createWidget: () => ctx.container.get<AiTerminalAssistantViewWidget>(AiTerminalAssistantViewWidget)
-    })).inSingletonScope();
+    bind(WidgetFactory)
+        .toDynamicValue((ctx) => ({
+            id: AiTerminalAssistantViewWidget.ID,
+            createWidget: () =>
+                ctx.container.get<AiTerminalAssistantViewWidget>(
+                    AiTerminalAssistantViewWidget,
+                ),
+        }))
+        .inSingletonScope();
 
     // View contribution (provides CommandContribution, MenuContribution, KeybindingContribution)
     bindViewContribution(bind, AiTerminalAssistantContribution);
-    bind(FrontendApplicationContribution).toService(AiTerminalAssistantContribution);
+    bind(FrontendApplicationContribution).toService(
+        AiTerminalAssistantContribution,
+    );
 
     bindAiTerminalAssistantPreferences(bind);
 });

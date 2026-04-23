@@ -14,7 +14,14 @@
 // SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0
 // *****************************************************************************
 
-import { createPreferenceProxy, nls, PreferenceContribution, PreferenceProxy, PreferenceSchema, PreferenceService } from '@theia/core';
+import {
+    createPreferenceProxy,
+    nls,
+    PreferenceContribution,
+    PreferenceProxy,
+    PreferenceSchema,
+    PreferenceService,
+} from '@theia/core';
 import { interfaces } from '@theia/core/shared/inversify';
 
 export const ASSISTANT_MODE_PREF = 'terminal.aiAssistant.mode';
@@ -25,39 +32,58 @@ export const AiTerminalAssistantPreferenceSchema: PreferenceSchema = {
             type: 'string',
             enum: ['standalone', 'dedicated'],
             enumDescriptions: [
-                nls.localize('theia/terminal/aiTerminalAssistant/modeStandalone', 'Run commands directly in an isolated AI assistant window.'),
-                nls.localize('theia/terminal/aiTerminalAssistant/modeDedicated', 'Watch and summarize output from your existing terminal sessions.')
+                nls.localize(
+                    'theia/terminal/aiTerminalAssistant/modeStandalone',
+                    'Run commands directly in an isolated AI assistant window.',
+                ),
+                nls.localize(
+                    'theia/terminal/aiTerminalAssistant/modeDedicated',
+                    'Watch and summarize output from your existing terminal sessions.',
+                ),
             ],
             default: 'standalone',
-            description: nls.localize('theia/terminal/aiTerminalAssistant/changeMode', 'Controls the AI Terminal Assistant display mode')
-        }
-    }
+            description: nls.localize(
+                'theia/terminal/aiTerminalAssistant/changeMode',
+                'Controls the AI Terminal Assistant display mode',
+            ),
+        },
+    },
 };
 
 export const AiTerminalAssistantPreferenceContribution = {
-    schema: AiTerminalAssistantPreferenceSchema
+    schema: AiTerminalAssistantPreferenceSchema,
 };
 
 export interface AiTerminalAssistantConfiguration {
     'terminal.aiAssistant.mode': 'standalone' | 'dedicated';
 }
 
-export type AiTerminalAssistantPreferences = PreferenceProxy<AiTerminalAssistantConfiguration>;
+export type AiTerminalAssistantPreferences =
+    PreferenceProxy<AiTerminalAssistantConfiguration>;
 
-export const AiTerminalAssistantPreferences = Symbol('AiTerminalAssistantPreferences');
+export const AiTerminalAssistantPreferences = Symbol(
+    'AiTerminalAssistantPreferences',
+);
 
 export function createAiTerminalAssistantPreferences(
     preferences: PreferenceService,
-    schema: PreferenceSchema = AiTerminalAssistantPreferenceSchema
+    schema: PreferenceSchema = AiTerminalAssistantPreferenceSchema,
 ): AiTerminalAssistantPreferences {
     return createPreferenceProxy(preferences, schema);
 }
 
- export function bindAiTerminalAssistantPreferences(bind: interfaces.Bind): void {
-    bind(AiTerminalAssistantPreferences).toDynamicValue(ctx => {
-        const preferences = ctx.container.get<PreferenceService>(PreferenceService);
-        return createAiTerminalAssistantPreferences(preferences);
-    }).inSingletonScope();
+export function bindAiTerminalAssistantPreferences(
+    bind: interfaces.Bind,
+): void {
+    bind(AiTerminalAssistantPreferences)
+        .toDynamicValue((ctx) => {
+            const preferences =
+                ctx.container.get<PreferenceService>(PreferenceService);
+            return createAiTerminalAssistantPreferences(preferences);
+        })
+        .inSingletonScope();
 
-    bind(PreferenceContribution).toConstantValue({ schema: AiTerminalAssistantPreferenceSchema });
+    bind(PreferenceContribution).toConstantValue({
+        schema: AiTerminalAssistantPreferenceSchema,
+    });
 }
