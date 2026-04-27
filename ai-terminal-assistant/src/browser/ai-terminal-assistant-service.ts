@@ -34,6 +34,7 @@ import { TaskWatcher } from '@theia/task/lib/common';
 import { TaskService } from '@theia/task/lib/browser/task-service';
 import { AiTerminalAssistantPreferences } from './ai-terminal-assistant-preferences';
 import { ErrorSourceResolutionService } from './error-source-resolution-service';
+import { TerminalPreferences } from '@theia/terminal/lib/common/terminal-preferences';
 
 export interface SummaryRequest {
     cwd: string;
@@ -90,6 +91,9 @@ export class SummaryServiceImpl implements SummaryService {
 
     @inject(AiTerminalAssistantPreferences)
     protected readonly aiTerminalAssistantPreferences: AiTerminalAssistantPreferences;
+
+    @inject(TerminalPreferences)
+    protected readonly terminalPreferences: TerminalPreferences;
 
     @inject(ILogger)
     protected readonly logger: ILogger;
@@ -379,10 +383,26 @@ export class SummaryServiceImpl implements SummaryService {
     }
 
     protected getRecentTerminalCommands(terminal: TerminalWidget): string[] {
-        const maxLines = 50;
+        if (
+            this.terminalPreferences['terminal.integrated.enableCommandHistory']
+        ) {
+            const commandHistory =
+                terminal.commandHistoryState?.commandHistory ?? [];
+            if (commandHistory.length === 0) {
+                return [];
+            }
+            const lastTerminalBlock = commandHistory[commandHistory.length - 1];
+            console.log(JSON.stringify(lastTerminalBlock));
+            return [
+                `${lastTerminalBlock.command}\n${lastTerminalBlock.output}`,
+            ];
+        }
+
+        const maxLines = 100;
+        const terminalBufferLength = terminal.buffer.length;
         return terminal.buffer.getLines(
-            Math.max(terminal.buffer.length - maxLines, 0),
-            maxLines,
+            Math.max(0, terminalBufferLength - maxLines),
+            Math.min(maxLines, terminalBufferLength),
             true,
         );
     }

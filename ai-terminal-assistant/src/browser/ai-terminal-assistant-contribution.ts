@@ -21,7 +21,7 @@ import {
 } from '@theia/core/shared/inversify';
 import { TerminalService } from '@theia/terminal/lib/browser/base/terminal-service';
 import { AiTerminalSummaryAgent } from './terminal-output-analysis-agent';
-import { ENABLE_AI_CONTEXT_KEY } from '@theia/ai-core/lib/browser';
+import { ENABLE_AI_CONTEXT_KEY } from '@theia/ai-core/lib/browser/ai-activation-service';
 import { AICommandHandlerFactory } from '@theia/ai-core/lib/browser/ai-command-handler-factory';
 import { AgentService } from '@theia/ai-core';
 import {

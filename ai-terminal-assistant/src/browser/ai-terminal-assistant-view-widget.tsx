@@ -16,7 +16,7 @@
 import { BaseWidget, codicon, PanelLayout } from '@theia/core/lib/browser';
 import { SummaryService } from './ai-terminal-assistant-service';
 import { ProgressBarFactory } from '@theia/core/lib/browser/progress-bar-factory';
-import { AIActivationService } from '@theia/ai-core/lib/browser';
+import { AIActivationService } from '@theia/ai-core/lib/browser/ai-activation-service';
 import { CommandService, PreferenceService } from '@theia/core';
 import { SummaryViewWidget } from './ai-terminal-assistant-summary-widget';
 import { AiTerminalBufferWidget } from './ai-terminal-assistant-buffer-widget';

@@ -1,0 +1,33 @@
+{
+  "private": true,
+  "name": "browser-app",
+  "version": "0.0.0",
+  "dependencies": {
+    "@theia/ai-core": "1.70.2",
+    "@theia/ai-openai": "1.70.2",
+    "@theia/core": "1.70.2",
+    "@theia/editor": "1.70.2",
+    "@theia/filesystem": "1.70.2",
+    "@theia/markers": "1.70.2",
+    "@theia/messages": "1.70.2",
+    "@theia/monaco": "1.70.2",
+    "@theia/navigator": "1.70.2",
+    "@theia/preferences": "1.70.2",
+    "@theia/process": "1.70.2",
+    "@theia/terminal": "1.70.2",
+    "@theia/workspace": "1.70.2",
+    "@fangoling/ai-terminal-assistant": "file:../ai-terminal-assistant"
+  },
+  "devDependencies": {
+    "@theia/cli": "1.70.2"
+  },
+  "scripts": {
+    "bundle": "npm run rebuild && theia build --mode development",
+    "rebuild": "theia rebuild:browser --cacheRoot ..",
+    "start": "theia start",
+    "watch": "npm run rebuild && theia build --watch --mode development"
+  },
+  "theia": {
+    "target": "browser"
+  }
+}

@@ -1,31 +1,91 @@
 <div align='center'>
-
 <br />
-
-<img src='https://raw.githubusercontent.com/eclipse-theia/theia/master/logo/theia.svg?sanitize=true' alt='theia-ext-logo' width='100px' />
-
-<h2>ECLIPSE THEIA - AI TERMINAL ASSISTANT EXTENSION</h2>
-
-<hr />
-
+<img src='./logo/theia.svg' alt='theia logo' width='125'>
+<h2>EduIDE - AI Terminal Extension</h2>
 </div>
 
-## Description
+## Overview
+AI Terminal Theia extensions for the EduIDE 
 
-The `@theia/ai-terminal-assistant` extension contributes a widget to the terminal view.\
-The widget analyzes terminal outputs, primarily build outputs and displays error in a structured way.
+## Features
+- `@fangoling/ai-terminal-assistant`:
+   - Summarize terminal output with ai assistance
+   - Provide remediation steps in case of an error
 
-## Additional Information
+## Getting started
 
-- [Theia - GitHub](https://github.com/eclipse-theia/theia)
-- [Theia - Website](https://theia-ide.org/)
+Please install all necessary [prerequisites](https://github.com/eclipse-theia/theia/blob/master/doc/Developing.md#prerequisites).
 
-## License
+## Running the browser example
 
-- [Eclipse Public License 2.0](http://www.eclipse.org/legal/epl-2.0/)
-- [一 (Secondary) GNU General Public License, version 2 with the GNU Classpath Exception](https://projects.eclipse.org/license/secondary-gpl-2.0-cp)
+    npm run build:browser
+    npm run start:browser
 
-## Trademark
+*or:*
 
-"Theia" is a trademark of the Eclipse Foundation
-<https://www.eclipse.org/theia>
+    npm run build:browser
+    cd browser-app
+    npm start
+
+*or:* launch `Start Browser Backend` configuration from VS code.
+
+Open http://localhost:3000 in the browser.
+
+## Running the Electron example
+
+    npm run build:electron
+    npm run start:electron
+
+*or:*
+
+    npm run build:electron
+    cd electron-app
+    npm start
+
+*or:* launch `Start Electron Backend` configuration from VS code.
+
+
+## Developing with the browser example
+
+Start watching all packages, including `browser-app`, of your application with
+
+    npm run watch:browser
+
+*or* watch only specific packages with
+
+    cd 
+    npm run watch
+
+and the browser example.
+
+    cd browser-app
+    npm run watch
+
+Run the example as [described above](#Running-the-browser-example)
+## Developing with the Electron example
+
+Start watching all packages, including `electron-app`, of your application with
+
+    npm run watch:electron
+
+*or* watch only specific packages with
+
+    cd 
+    npm run watch
+
+and the Electron example.
+
+    cd electron-app
+    npm run watch
+
+Run the example as [described above](#Running-the-Electron-example)
+
+## Publishing 
+
+Create a npm user and login to the npm registry, [more on npm publishing](https://docs.npmjs.com/getting-started/publishing-npm-packages).
+
+    npm login
+
+Publish packages with lerna to update versions properly across local packages, [more on publishing with lerna](https://github.com/lerna/lerna#publish).
+
+    npx lerna publish

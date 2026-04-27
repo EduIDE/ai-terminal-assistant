@@ -1,0 +1,49 @@
+{
+  "name": "@fangoling/ai-terminal-assistant",
+  "version": "0.1.0",
+  "description": "EduIDE Terminal Assistant Extension",
+  "dependencies": {
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.2",
+    "@theia/ai-core": "1.70.2",
+    "@theia/core": "1.70.2",
+    "@theia/debug": "1.70.2",
+    "@theia/file-search": "1.70.2",
+    "@theia/filesystem": "1.70.2",
+    "@theia/monaco": "1.70.2",
+    "@theia/monaco-editor-core": "1.108.201",
+    "@theia/task": "1.70.2",
+    "@theia/terminal": "1.70.2",
+    "@theia/workspace": "1.70.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "theiaExtensions": [
+    {
+      "frontend": "lib/browser/ai-terminal-assistant-frontend-module"
+    }
+  ],
+  "keywords": [
+    "theia-extension"
+  ],
+  "license": "EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EduIDE/ai-terminal-assistant"
+  },
+  "files": [
+    "lib",
+    "src"
+  ],
+  "scripts": {
+    "prepare": "yarn run clean && yarn run build",
+    "clean": "rimraf lib",
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "devDependencies": {
+    "rimraf": "latest",
+    "typescript": "~5.4.5"
+  }
+}

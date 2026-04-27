@@ -20,7 +20,7 @@ import {
     Summary,
 } from './terminal-output-analysis-agent';
 import { MonacoEditorService } from '@theia/monaco/lib/browser/monaco-editor-service';
-import * as monaco from '@theia/monaco-editor-core/esm/vs/editor/editor.api';
+import { Range } from '@theia/monaco-editor-core/esm/vs/editor/common/core/range';
 import { FileService } from '@theia/filesystem/lib/browser/file-service';
 import { FileSearchService } from '@theia/file-search/lib/common/file-search-service';
 import { WorkspaceService } from '@theia/workspace/lib/browser';
@@ -96,7 +96,7 @@ export class ErrorSourceResolutionService {
             this.decorationsCollection =
                 monacoEditor.createDecorationsCollection([
                     {
-                        range: new monaco.Range(
+                        range: new Range(
                             error.line || 1,
                             1,
                             error.line || 1,

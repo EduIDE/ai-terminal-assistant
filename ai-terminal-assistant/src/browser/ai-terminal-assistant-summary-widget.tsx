@@ -21,7 +21,7 @@ import {
     injectable,
     postConstruct,
 } from '@theia/core/shared/inversify';
-import { AIActivationService } from '@theia/ai-core/lib/browser';
+import { AIActivationService } from '@theia/ai-core/lib/browser/ai-activation-service';
 import { SummaryService } from './ai-terminal-assistant-service';
 import {
     Summary,

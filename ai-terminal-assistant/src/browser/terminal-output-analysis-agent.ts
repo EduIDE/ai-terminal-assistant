@@ -20,10 +20,10 @@ import {
     isLanguageModelParsedResponse,
     LanguageModelRegistry,
     LanguageModelRequirement,
+    LanguageModelService,
     PromptService,
     UserRequest,
 } from '@theia/ai-core/lib/common';
-import { LanguageModelService } from '@theia/ai-core/lib/browser';
 import { generateUuid, ILogger, nls } from '@theia/core';
 import { terminalPrompts } from './ai-terminal-assistant-prompt-template';
 import { inject, injectable } from '@theia/core/shared/inversify';
