@@ -12,11 +12,12 @@
 
 ## Description
 
-The `ai-terminal-assistant` extension contributes a widget to the terminal view.\
-The widget analyzes terminal outputs, primarily build outputs and displays error in a structured way.
+The `ai-terminal-assistant` extension contributes a widget that analyzes terminal outputs and displays errors in a structured way.\
 
 ## Additional Information
 
+- [EduIDE - Github](https://github.com/EduIDE/EduIDE)
+- [EduIDE - Website](https://eduide.github.io/Docs/)
 - [Theia - GitHub](https://github.com/eclipse-theia/theia)
 - [Theia - Website](https://theia-ide.org/)
 
@@ -25,7 +26,3 @@ The widget analyzes terminal outputs, primarily build outputs and displays error
 - [Eclipse Public License 2.0](http://www.eclipse.org/legal/epl-2.0/)
 - [一 (Secondary) GNU General Public License, version 2 with the GNU Classpath Exception](https://projects.eclipse.org/license/secondary-gpl-2.0-cp)
 
-## Trademark
-
-"Theia" is a trademark of the Eclipse Foundation
-<https://www.eclipse.org/theia>
