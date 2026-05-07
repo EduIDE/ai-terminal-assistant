@@ -20,14 +20,14 @@ import {
     Summary,
 } from './terminal-output-analysis-agent';
 import { MonacoEditorService } from '@theia/monaco/lib/browser/monaco-editor-service';
-import { Range } from '@theia/monaco-editor-core/esm/vs/editor/common/core/range';
 import { FileService } from '@theia/filesystem/lib/browser/file-service';
 import { FileSearchService } from '@theia/file-search/lib/common/file-search-service';
 import { WorkspaceService } from '@theia/workspace/lib/browser';
 import { LocalFileLinkProvider } from '@theia/terminal/lib/browser/terminal-file-link-provider';
 import { TerminalService } from '@theia/terminal/lib/browser/base/terminal-service';
 import { ILogger, URI } from '@theia/core';
-import { IEditorDecorationsCollection } from '@theia/monaco-editor-core/esm/vs/editor/common/editorCommon';
+import type { IEditorDecorationsCollection } from '@theia/monaco-editor-core/esm/vs/editor/common/editorCommon';
+import { Range } from '@theia/monaco-editor-core';
 
 @injectable()
 export class ErrorSourceResolutionService {
@@ -82,11 +82,12 @@ export class ErrorSourceResolutionService {
             `${error.file}${error.line ? ':' + error.line.toString() : ''}`,
             terminal,
         );
-        const termminalLink = terminalLinks[0];
-        if (!termminalLink) {
+        const terminalLink = terminalLinks[0];
+        if (!terminalLink) {
             throw new Error(`Could not find file link for ${error.file}`);
         }
-        await termminalLink.handle();
+        await terminalLink.handle();
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         const monacoEditor = this.monacoEditorService.getActiveCodeEditor();
         if (monacoEditor) {
@@ -112,6 +113,12 @@ export class ErrorSourceResolutionService {
                         },
                     },
                 ]);
+        }
+    }
+
+    clearDecorations(): void {
+        if (this.decorationsCollection) {
+            this.decorationsCollection.clear();
         }
     }
 
