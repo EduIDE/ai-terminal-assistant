@@ -128,7 +128,16 @@
 
 .summary-view-container.welcome-state {
     height: 100%;
-    justify-content: center;
+    justify-content: flex-start;
+}
+
+.welcome-state-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    gap: calc(var(--theia-ui-padding) * 2);
 }
 
 .ai-terminal-assistant-view .summary-loading {
@@ -145,6 +154,21 @@
 
 .ai-summary-container {
     width: 100%;
+}
+
+.ai-summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.request-summary-button {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--theia-ui-padding) * 2/3);
+    border-radius: calc(var(--theia-ui-padding) * 2);
+    flex-shrink: 0;
 }
 
 /* ==========================================
@@ -314,6 +338,8 @@
 .ai-terminal-assistant-view .error-detail-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
 }
 
 .ai-terminal-assistant-view .error-detail-header-title {
@@ -362,7 +388,6 @@
 
 .ai-terminal-assistant-view .error-detail-field {
     width: 100%;
-    max-width: min(600px, 100%);
     display: flex;
     align-items: flex-start;
     gap: calc(var(--theia-ui-padding) * 4/3);
@@ -376,7 +401,6 @@
 
 .ai-terminal-assistant-view .error-detail-divider {
     width: 100%;
-    max-width: min(600px, 100%);
     height: 0;
     border: none;
     border-top: var(--theia-border-width) solid var(--theia-widget-shadow);
@@ -388,7 +412,6 @@
 
 .ai-terminal-assistant-view .error-lines-container {
     width: 100%;
-    max-width: min(600px, 100%);
     background-color: var(--theia-editor-background);
     border-radius: var(--theia-border-radius);
     overflow: hidden;
@@ -498,7 +521,6 @@
     padding: 0;
     padding-left: calc(var(--theia-ui-padding) * 3);
     width: 100%;
-    max-width: min(600px, 100%);
 }
 
 .ai-terminal-assistant-view .error-fix-steps li {
