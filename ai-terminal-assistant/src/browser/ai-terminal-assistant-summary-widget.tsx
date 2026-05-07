@@ -51,7 +51,7 @@ export interface SummaryViewWidgetState {
 export class SummaryViewWidget extends ReactWidget implements StatefulWidget {
     public static ID = 'summary-view-widget';
     static LABEL = nls.localize(
-        'theia/ai/summary/view/label',
+        'theia/ai/aiTerminalAssistant/summary/view/label',
         'AI Terminal Assistant',
     );
 

@@ -48,17 +48,17 @@ export namespace AiTerminalAssistantCommands {
         id: 'ai-terminal-output-summary:toggle',
         label: nls.localize('', 'New AI Terminal Assistant'),
         iconClass: codicon('sparkle'),
-    }, 'theia/ai/terminal/summarize');
+    }, 'theia/ai/aiTerminalAssistant/summarize');
     export const AI_TERMINAL_ASSISTANT_START_SUMMARY = Command.toLocalizedCommand({
         id: 'ai-terminal-assistant:start-summary',
         label: nls.localize('', 'Analyze last terminal output'),
         iconClass: codicon('play')
-    }, 'theia/ai/terminal/startSummary');
+    }, 'theia/ai/aiTerminalAssistant/startSummary');
     export const AI_TERMINAL_ASSISTANT_RETRY_SUMMARY = Command.toLocalizedCommand({
         id: 'ai-terminal-assistant:retry-summary',
         label: nls.localize('', 'Analyze last terminal output again'),
         iconClass: codicon('debug-rerun'),
-    }, 'theia/ai/terminal/retrySummary');
+    }, 'theia/ai/aiTerminalAssistant/retrySummary');
 }
 
 /**
@@ -157,7 +157,7 @@ export class AiTerminalAssistantContribution
                     const widget = await this.openView({ activate: true });
                     widget.title.closable = true;
                     widget.title.label = nls.localize(
-                        'theia/ai/terminal/summaryTitle',
+                        'theia/ai/aiTerminalAssistant/summaryTitle',
                         'AI Terminal Assistant',
                     );
                 },
@@ -193,7 +193,7 @@ export class AiTerminalAssistantContribution
             const widget = await this.openView({ activate: true });
             widget.title.closable = true;
             widget.title.label = nls.localize(
-                'theia/ai/terminal/summaryTitle',
+                'theia/ai/aiTerminalAssistant/summaryTitle',
                 'AI Terminal Assistant',
             );
         };

@@ -73,7 +73,7 @@ export class AiTerminalSummaryAgent implements Agent {
     id = 'Terminal Summary';
     name = 'Terminal Summary Assistant';
     description = nls.localize(
-        'theia/ai/terminal/agent/description',
+        'theia/ai/aiTerminalAssistant/agent/description',
         'This agent provides assistance to provide structured terminal output summaries. \
         It accesses the current directory, environment and the recent terminal output of the terminal session to provide context-aware assistance',
     );
@@ -84,7 +84,7 @@ export class AiTerminalSummaryAgent implements Agent {
             name: 'shell',
             usedInPrompt: true,
             description: nls.localize(
-                'theia/ai/terminal/agent/vars/shell/description',
+                'theia/ai/aiTerminalAssistant/agent/vars/shell/description',
                 'The shell being used, e.g., /usr/bin/zsh.',
             ),
         },
@@ -92,7 +92,7 @@ export class AiTerminalSummaryAgent implements Agent {
             name: 'cwd',
             usedInPrompt: true,
             description: nls.localize(
-                'theia/ai/terminal/agent/vars/cwd/description',
+                'theia/ai/aiTerminalAssistant/agent/vars/cwd/description',
                 'The current working directory.',
             ),
         },
@@ -100,7 +100,7 @@ export class AiTerminalSummaryAgent implements Agent {
             name: 'recentTerminalContents',
             usedInPrompt: true,
             description: nls.localize(
-                'theia/ai/terminal/agent/vars/recentTerminalContents/description',
+                'theia/ai/aiTerminalAssistant/agent/vars/recentTerminalContents/description',
                 'The last 0 to 50 recent lines visible in the terminal.',
             ),
         },

@@ -33,17 +33,17 @@ export const AiTerminalAssistantPreferenceSchema: PreferenceSchema = {
             enum: ['standalone', 'dedicated'],
             enumDescriptions: [
                 nls.localize(
-                    'theia/terminal/aiTerminalAssistant/modeStandalone',
+                    'theia/ai/aiTerminalAssistant/modeStandalone',
                     'Run commands directly in an isolated AI assistant window.',
                 ),
                 nls.localize(
-                    'theia/terminal/aiTerminalAssistant/modeDedicated',
+                    'theia/ai/aiTerminalAssistant/modeDedicated',
                     'Watch and summarize output from your existing terminal sessions.',
                 ),
             ],
             default: 'standalone',
             description: nls.localize(
-                'theia/terminal/aiTerminalAssistant/changeMode',
+                'theia/ai/aiTerminalAssistant/changeMode',
                 'Controls the AI Terminal Assistant display mode',
             ),
         },
