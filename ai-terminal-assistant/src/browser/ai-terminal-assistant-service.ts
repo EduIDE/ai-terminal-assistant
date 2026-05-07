@@ -21,12 +21,13 @@ import {
 import {
     AiTerminalSummaryAgent,
     ErrorDetail,
+    NoLanguageModelError,
     Summary,
 } from './terminal-output-analysis-agent';
 import { TerminalService } from '@theia/terminal/lib/browser/base/terminal-service';
 import { TerminalWidget } from '@theia/terminal/lib/browser/base/terminal-widget';
 import { TerminalWidgetImpl } from '@theia/terminal/lib/browser/terminal-widget-impl';
-import { Emitter, Event, ILogger } from '@theia/core';
+import { Emitter, Event, ILogger, MessageService } from '@theia/core';
 import { DebugSessionManager } from '@theia/debug/lib/browser/debug-session-manager';
 import { Widget } from '@theia/core/lib/browser';
 import { TaskTerminalWidgetManager } from '@theia/task/lib/browser/task-terminal-widget-manager';
@@ -42,6 +43,12 @@ export interface SummaryRequest {
     recentTerminalContents: string[];
 }
 
+interface CachedTerminalOutput {
+    cwd: string;
+    shell: string | undefined;
+    recentTerminalContents: string[];
+}
+
 export const SummaryService = Symbol('SummaryService');
 
 export interface SummaryService {
@@ -51,19 +58,21 @@ export interface SummaryService {
     readonly onSummaryRequestFinished: Event<Summary | undefined>;
     readonly onTaskStarted: Event<void>;
     readonly onTaskExited: Event<void>;
+    readonly onCachedOutputChanged: Event<void>;
 
     currentTerminal: TerminalWidget;
     currentSummary: Summary | undefined;
     currentErrorLines: string[];
     isTaskRunning: boolean;
 
+    requestSummary(isManualReRequest?: boolean): Promise<void>;
     sendSummaryRequest(request: SummaryRequest): Promise<Summary | undefined>;
     sendSummaryRequestForLastUsedTerminal(): Promise<Summary | undefined>;
     openErrorInEditor(error: ErrorDetail): Promise<void>;
     writeToCurrentTerminal(command: string): Promise<void>;
     logCurrentTerminalContent(): Promise<void>;
     getBufferContent(): Promise<string[]>;
-    toggleTerminalVisibility(): void;
+    hasCachedOutput: boolean;
 }
 
 @injectable()
@@ -98,6 +107,9 @@ export class SummaryServiceImpl implements SummaryService {
     @inject(ILogger)
     protected readonly logger: ILogger;
 
+    @inject(MessageService)
+    protected readonly messageService: MessageService;
+
     protected readonly onAllTerminalsClosedEmitter = new Emitter<void>();
     readonly onAllTerminalsClosed: Event<void> =
         this.onAllTerminalsClosedEmitter.event;
@@ -122,6 +134,10 @@ export class SummaryServiceImpl implements SummaryService {
         new Emitter<void>();
     readonly onCurrentTerminalBufferChanged: Event<void> =
         this.onCurrentTerminalBufferChangedEmitter.event;
+
+    protected readonly onCachedOutputChangedEmitter = new Emitter<void>();
+    readonly onCachedOutputChanged: Event<void> =
+        this.onCachedOutputChangedEmitter.event;
 
     protected readonly activeTerminals = new Set<TerminalWidget>();
 
@@ -151,29 +167,11 @@ export class SummaryServiceImpl implements SummaryService {
     }
 
     protected _isStandAlone: boolean;
+    protected _cachedTerminalOutput: CachedTerminalOutput | undefined;
 
     @postConstruct()
     protected initialize(): void {
         this.initializeHiddenTerminal();
-        // this.terminalService.all.forEach(terminal => {
-        //     this.activeTerminals.add(terminal);
-        //     terminal.onDidDispose(() => {
-        //         this.activeTerminals.delete(terminal);
-        //         if (this.activeTerminals.size === 0) {
-        //             this.onAllTerminalsClosedEmitter.fire();
-        //         }
-        //     });
-        // });
-
-        // this.terminalService.onDidCreateTerminal(async (terminal: TerminalWidget) => {
-        //     this.activeTerminals.add(terminal);
-        //     terminal.onDidDispose(() => {
-        //         this.activeTerminals.delete(terminal);
-        //         if (this.activeTerminals.size === 0) {
-        //             this.onAllTerminalsClosedEmitter.fire();
-        //         }
-        //     });
-        // });
 
         this._isStandAlone =
             this.aiTerminalAssistantPreferences['terminal.aiAssistant.mode'] ===
@@ -184,7 +182,7 @@ export class SummaryServiceImpl implements SummaryService {
                 if (event.preferenceName === 'terminal.aiAssistant.mode') {
                     const newMode =
                         this.aiTerminalAssistantPreferences[
-                            'terminal.aiAssistant.mode'
+                        'terminal.aiAssistant.mode'
                         ];
                     this._isStandAlone = newMode === 'standalone';
                     if (newMode === 'dedicated') {
@@ -239,6 +237,8 @@ export class SummaryServiceImpl implements SummaryService {
 
         this.taskWatcher.onTaskCreated(() => {
             this._isTaskRunning = true;
+            this._cachedTerminalOutput = undefined;
+            this.onCachedOutputChangedEmitter.fire();
             this.onTaskStartedEmitter.fire();
         });
 
@@ -289,20 +289,6 @@ export class SummaryServiceImpl implements SummaryService {
         }
     }
 
-    toggleTerminalVisibility(): void {
-        if (this.hiddenTerminalContainer) {
-            if (this.isTerminalVisible) {
-                this.hiddenTerminalContainer.style.clipPath = 'none';
-                this.hiddenTerminalContainer.style.pointerEvents = 'auto';
-                this.isTerminalVisible = false;
-            } else {
-                this.hiddenTerminalContainer.style.clipPath = 'inset(100%)';
-                this.hiddenTerminalContainer.style.pointerEvents = 'none';
-                this.isTerminalVisible = true;
-            }
-        }
-    }
-
     async logCurrentTerminalContent(): Promise<void> {
         const terminalContent = this.currentTerminal.buffer.getLines(
             0,
@@ -344,14 +330,45 @@ export class SummaryServiceImpl implements SummaryService {
         return terminal;
     }
 
-    async requestSummary(): Promise<void> {
+    get hasCachedOutput(): boolean {
+        return this._cachedTerminalOutput !== undefined;
+    }
+
+    async requestSummary(isManualReRequest?: boolean): Promise<void> {
         this.onSummaryRequestStartedEmitter.fire();
-        const summary = await this.sendSummaryRequestForLastUsedTerminal();
-        this._currentSummary = summary
-            ? await this.errorSourceResolutionService.enrichErrorsWithFileContent(
-                  summary,
-              )
-            : undefined;
+        this.errorSourceResolutionService.clearDecorations();
+        try {
+            const summary =
+                isManualReRequest && this._isStandAlone && this._cachedTerminalOutput
+                    ? await this.agent.getSummary(
+                        this._cachedTerminalOutput.cwd,
+                        this._cachedTerminalOutput.recentTerminalContents,
+                        this._cachedTerminalOutput.shell,
+                    )
+                    : await this.sendSummaryRequestForLastUsedTerminal();
+            if (!summary) {
+                this.messageService.error(
+                    'AI Terminal Assistant: Summary request failed. The AI model returned no result.',
+                );
+            }
+            this._currentSummary = summary
+                ? await this.errorSourceResolutionService.enrichErrorsWithFileContent(
+                    summary,
+                )
+                : undefined;
+        } catch (error) {
+            if (error instanceof NoLanguageModelError) {
+                this.messageService.error(
+                    'AI Terminal Assistant: No AI provider configured. Please configure a language model in the AI settings.',
+                );
+            } else {
+                this.messageService.error(
+                    `AI Terminal Assistant: Summary request failed. ${error instanceof Error ? error.message : String(error)}`,
+                );
+            }
+            this.logger.error('Error requesting terminal summary:', error);
+            this._currentSummary = undefined;
+        }
         this.onSummaryRequestFinishedEmitter.fire(this.currentSummary);
     }
 
@@ -373,6 +390,7 @@ export class SummaryServiceImpl implements SummaryService {
             const shell = await this.getTerminalShell(lastUsedTerminal);
             const recentTerminalContents =
                 this.getRecentTerminalCommands(lastUsedTerminal);
+            this.logger.debug("terminal contents: ", recentTerminalContents);
             return this.agent.getSummary(cwd, recentTerminalContents, shell);
         }
         throw new Error('No active terminal found.');
@@ -383,27 +401,27 @@ export class SummaryServiceImpl implements SummaryService {
     }
 
     protected getRecentTerminalCommands(terminal: TerminalWidget): string[] {
-        if (
-            this.terminalPreferences['terminal.integrated.enableCommandHistory']
-        ) {
-            const commandHistory =
-                terminal.commandHistoryState?.commandHistory ?? [];
-            if (commandHistory.length === 0) {
-                return [];
-            }
-            const lastTerminalBlock = commandHistory[commandHistory.length - 1];
-            console.log(JSON.stringify(lastTerminalBlock));
-            return [
-                `${lastTerminalBlock.command}\n${lastTerminalBlock.output}`,
-            ];
-        }
+        // TODO: impementation of fetch terminal command from last command block, enable when upstream fix is merged
+        // if (
+        //     this.terminalPreferences['terminal.integrated.enableCommandHistory']
+        // ) {
+        //     const commandHistory =
+        //         terminal.commandHistoryState?.commandHistory ?? [];
+        //     if (commandHistory.length === 0) {
+        //         return [];
+        //     }
+        //     const lastTerminalBlock = commandHistory[commandHistory.length - 1];
+        //     this.logger.debug("command: ", JSON.stringify(lastTerminalBlock));
+        //     return [
+        //         `${lastTerminalBlock.command}\n${lastTerminalBlock.output}`,
+        //     ];
+        // }
 
         const maxLines = 100;
         const terminalBufferLength = terminal.buffer.length;
         return terminal.buffer.getLines(
             Math.max(0, terminalBufferLength - maxLines),
-            Math.min(maxLines, terminalBufferLength),
-            true,
+            Math.min(maxLines, terminalBufferLength)
         );
     }
 
@@ -419,7 +437,30 @@ export class SummaryServiceImpl implements SummaryService {
         }
     }
 
+    protected async cacheLastTerminalOutput(): Promise<void> {
+        const lastUsedTerminal = this.terminalService.lastUsedTerminal;
+        if (!lastUsedTerminal) {
+            return;
+        }
+        try {
+            const cwd = (
+                await (lastUsedTerminal as TerminalWidgetImpl).cwd
+            ).toString();
+            const shell = await this.getTerminalShell(lastUsedTerminal);
+            const recentTerminalContents =
+                this.getRecentTerminalCommands(lastUsedTerminal);
+            this._cachedTerminalOutput = { cwd, shell, recentTerminalContents };
+            this.onCachedOutputChangedEmitter.fire();
+        } catch (err) {
+            this.logger.warn('Failed to cache terminal output:', err);
+        }
+    }
+
     protected async createNewTerminal(): Promise<void> {
+        // Capture terminal state before disposal so manual re-requests can use it
+        if (this._isStandAlone) {
+            await this.cacheLastTerminalOutput();
+        }
         // Dispose previous terminal if exists
         if (this.currentTerminal && !this.currentTerminal.isDisposed) {
             this.currentTerminal.dispose();

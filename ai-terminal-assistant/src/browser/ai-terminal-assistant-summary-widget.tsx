@@ -185,75 +185,79 @@ const TerminalOutputSummary: React.FunctionComponent<
     markdownRenderer,
     onSummaryChange,
 }: TerminalOutputSummaryProps) => {
-    const { loading, summary } = useSummaryData(
-        summaryService,
-        onSummaryChange,
-    );
+        const { loading, summary } = useSummaryData(
+            summaryService,
+            onSummaryChange,
+        );
 
-    const handleOpenError = React.useCallback(
-        async (error: ErrorDetail) => {
-            await summaryService.openErrorInEditor(error);
-        },
-        [summaryService],
-    );
+        const handleOpenError = React.useCallback(
+            async (error: ErrorDetail) => {
+                await summaryService.openErrorInEditor(error);
+            },
+            [summaryService],
+        );
 
-    const handleExecuteCommand = React.useCallback(
-        (commandId: string, error: ErrorDetail) => {
-            commandService.executeCommand(commandId, error);
-        },
-        [commandService],
-    );
+        const handleExecuteCommand = React.useCallback(
+            (commandId: string, error: ErrorDetail) => {
+                commandService.executeCommand(commandId, error);
+            },
+            [commandService],
+        );
 
-    const renderMarkdown = React.useCallback(
-        (content: string) => (
-            <Markdown
-                content={content}
-                markdownRenderer={markdownRenderer}
-            ></Markdown>
-        ),
-        [markdownRenderer],
-    );
+        const renderMarkdown = React.useCallback(
+            (content: string) => (
+                <Markdown
+                    content={content}
+                    markdownRenderer={markdownRenderer}
+                ></Markdown>
+            ),
+            [markdownRenderer],
+        );
 
-    const commands = commandService.commands;
+        const commands = commandService.commands;
 
-    const isWelcome = !loading && !summary;
+        const isWelcome = !loading && !summary;
 
-    return (
-        <div
-            className={`summary-view-container${isWelcome ? ' welcome-state' : ''}`}
-        >
-            {loading ? (
-                <div className='summary-loading'>
-                    <span
-                        className={`${codicon('loading')} theia-animation-spin`}
-                    ></span>
-                    <span>Analyzing terminal output...</span>
-                </div>
-            ) : summary ? (
-                <div className='ai-summary-container'>
-                    <BuildResultOverview
-                        summary={summary}
-                        onRenderMarkdown={renderMarkdown}
-                    />
-                    <div className='error-overview-list'>
-                        {summary.errors.map((error, index) => (
-                            <ErrorOverview
-                                key={index}
-                                errorDetail={error}
-                                onExecuteCommand={handleExecuteCommand}
-                                onRenderMarkdown={renderMarkdown}
-                                onOpenError={handleOpenError}
-                                commands={commands}
-                            />
-                        ))}
+        return (
+            <div
+                className={`summary-view-container${isWelcome ? ' welcome-state' : ''}`}
+            >
+                {loading ? (
+                    <div className='summary-loading'>
+                        <span
+                            className={`${codicon('loading')} theia-animation-spin`}
+                        ></span>
+                        <span>Analyzing terminal output...</span>
                     </div>
-                </div>
-            ) : (
-                <WelcomeView />
-            )}
-        </div>
-    );
-};
+                ) : summary ? (
+                    <div className='ai-summary-container'>
+                        <div className='ai-summary-header'>
+                            <BuildResultOverview
+                                summary={summary}
+                                onRenderMarkdown={renderMarkdown}
+                            />
+                        </div>
+                        <div className='error-overview-list'>
+                            {summary.errors.map((error, index) => (
+                                <ErrorOverview
+                                    key={index}
+                                    errorDetail={error}
+                                    onExecuteCommand={handleExecuteCommand}
+                                    onRenderMarkdown={renderMarkdown}
+                                    onOpenError={handleOpenError}
+                                    commands={commands}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className='welcome-state-wrapper'>
+                        <WelcomeView />
+                    </div>
+                )}
+            </div>
+        );
+    };
 
 const BuildResultOverview: React.FunctionComponent<
     BuildResultOverviewProps
@@ -454,17 +458,6 @@ const ErrorContext: React.FunctionComponent<{
         </div>
     );
 };
-
-// const RequestSummaryButton: React.FunctionComponent<{ onRequestSummary: () => void, disabled?: boolean }> = ({ onRequestSummary, disabled }:
-// { onRequestSummary: () => void, disabled?: boolean }) => {
-//     const playButton = codicon('play');
-//     return (
-//         <button className='theia-button icon-button request-summary-button' onClick={onRequestSummary} disabled={disabled}>
-//             <div className={playButton} />
-//             Request Summary
-//         </button>
-//     );
-// }
 
 const OpenErrorInEditorButton: React.FunctionComponent<{
     onOpenError: () => void;

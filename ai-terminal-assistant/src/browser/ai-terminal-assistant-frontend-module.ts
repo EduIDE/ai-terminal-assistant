@@ -22,6 +22,7 @@ import {
     FrontendApplicationContribution,
     WidgetFactory,
 } from '@theia/core/lib/browser';
+import { TabBarToolbarContribution } from '@theia/core/lib/browser/shell/tab-bar-toolbar';
 import { ContainerModule } from '@theia/core/shared/inversify';
 import { AiTerminalSummaryAgent } from './terminal-output-analysis-agent';
 import { AiTerminalAssistantContribution } from './ai-terminal-assistant-contribution';
@@ -87,6 +88,7 @@ export default new ContainerModule((bind) => {
     bind(FrontendApplicationContribution).toService(
         AiTerminalAssistantContribution,
     );
+    bind(TabBarToolbarContribution).toService(AiTerminalAssistantContribution);
 
     bindAiTerminalAssistantPreferences(bind);
 });

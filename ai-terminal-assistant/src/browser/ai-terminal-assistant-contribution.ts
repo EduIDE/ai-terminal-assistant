@@ -29,8 +29,9 @@ import {
     codicon,
     FrontendApplicationContribution,
     KeybindingRegistry,
+    Widget,
 } from '@theia/core/lib/browser';
-import { Command, CommandRegistry, MenuModelRegistry, nls } from '@theia/core';
+import { Command, CommandRegistry, Emitter, MenuModelRegistry, nls } from '@theia/core';
 import {
     TerminalCommands,
     TerminalMenus,
@@ -38,17 +39,27 @@ import {
 import { SummaryService } from './ai-terminal-assistant-service';
 import { AiTerminalAssistantPreferences } from './ai-terminal-assistant-preferences';
 import { AiTerminalAssistantViewWidget } from './ai-terminal-assistant-view-widget';
+import { TabBarToolbarContribution, TabBarToolbarRegistry } from '@theia/core/lib/browser/shell/tab-bar-toolbar';
 
 export const AI_TERMINAL_SUMMARY_TOGGLE_COMMAND_ID = 'aiTerminalSummary:toggle';
 
-const AI_TERMINAL_SUMMARY_COMMAND = Command.toLocalizedCommand(
-    {
+export namespace AiTerminalAssistantCommands {
+    export const AI_TERMINAL_SUMMARY_COMMAND = Command.toLocalizedCommand({
         id: 'ai-terminal-output-summary:toggle',
         label: nls.localize('', 'New AI Terminal Assistant'),
         iconClass: codicon('sparkle'),
-    },
-    'theia/ai/terminal/summarize',
-);
+    }, 'theia/ai/terminal/summarize');
+    export const AI_TERMINAL_ASSISTANT_START_SUMMARY = Command.toLocalizedCommand({
+        id: 'ai-terminal-assistant:start-summary',
+        label: nls.localize('', 'Analyze last terminal output'),
+        iconClass: codicon('play')
+    }, 'theia/ai/terminal/startSummary');
+    export const AI_TERMINAL_ASSISTANT_RETRY_SUMMARY = Command.toLocalizedCommand({
+        id: 'ai-terminal-assistant:retry-summary',
+        label: nls.localize('', 'Analyze last terminal output again'),
+        iconClass: codicon('debug-rerun'),
+    }, 'theia/ai/terminal/retrySummary');
+}
 
 /**
  * Contribution for the AI Terminal Assistant widget.
@@ -58,8 +69,7 @@ const AI_TERMINAL_SUMMARY_COMMAND = Command.toLocalizedCommand(
 @injectable()
 export class AiTerminalAssistantContribution
     extends AbstractViewContribution<AiTerminalAssistantViewWidget>
-    implements FrontendApplicationContribution
-{
+    implements FrontendApplicationContribution, TabBarToolbarContribution {
     @inject(TerminalService)
     protected terminalService: TerminalService;
 
@@ -77,6 +87,8 @@ export class AiTerminalAssistantContribution
 
     @inject(AiTerminalAssistantPreferences)
     protected readonly preferences: AiTerminalAssistantPreferences;
+
+    protected readonly onToolbarItemsChangedEmitter = new Emitter<void>();
 
     constructor() {
         super({
@@ -100,6 +112,9 @@ export class AiTerminalAssistantContribution
                 this.shell.closeWidget(widget.id);
             }
         });
+        this.summaryService.onCachedOutputChanged(() =>
+            this.onToolbarItemsChangedEmitter.fire()
+        );
     }
 
     async initializeLayout(): Promise<void> {
@@ -112,12 +127,12 @@ export class AiTerminalAssistantContribution
             [...TerminalMenus.TERMINAL_CONTEXT_MENU, '_5'],
             {
                 when: ENABLE_AI_CONTEXT_KEY,
-                commandId: AI_TERMINAL_SUMMARY_COMMAND.id,
+                commandId: AiTerminalAssistantCommands.AI_TERMINAL_SUMMARY_COMMAND.id,
             },
         );
         menus.registerMenuAction([...TerminalMenus.TERMINAL_NEW], {
             when: ENABLE_AI_CONTEXT_KEY,
-            commandId: AI_TERMINAL_SUMMARY_COMMAND.id,
+            commandId: AiTerminalAssistantCommands.AI_TERMINAL_SUMMARY_COMMAND.id,
             order: '4',
         });
     }
@@ -126,10 +141,17 @@ export class AiTerminalAssistantContribution
         return this.preferences['terminal.aiAssistant.mode'] === 'standalone';
     }
 
+    protected withWidget<T>(widget: Widget | undefined, fn: (widget: AiTerminalAssistantViewWidget) => T): T | false {
+        if (widget instanceof AiTerminalAssistantViewWidget) {
+            return fn(widget);
+        }
+        return false;
+    }
+
     override registerCommands(commands: CommandRegistry): void {
         super.registerCommands(commands);
         commands.registerCommand(
-            AI_TERMINAL_SUMMARY_COMMAND,
+            AiTerminalAssistantCommands.AI_TERMINAL_SUMMARY_COMMAND,
             this.commandHandlerFactory({
                 execute: async () => {
                     const widget = await this.openView({ activate: true });
@@ -139,8 +161,27 @@ export class AiTerminalAssistantContribution
                         'AI Terminal Assistant',
                     );
                 },
-                isEnabled: () =>
-                    this.agentService.isEnabled(this.terminalAgent.id),
+                isEnabled: () => this.agentService.isEnabled(this.terminalAgent.id),
+            }),
+        );
+        commands.registerCommand(
+            AiTerminalAssistantCommands.AI_TERMINAL_ASSISTANT_START_SUMMARY,
+            this.commandHandlerFactory({
+                execute: async () => {
+                    this.summaryService.requestSummary();
+                },
+                isEnabled: w => this.withWidget(w, () => !this.isStandaloneMode),
+                isVisible: w => this.withWidget(w, () => !this.isStandaloneMode),
+            }),
+        );
+        commands.registerCommand(
+            AiTerminalAssistantCommands.AI_TERMINAL_ASSISTANT_RETRY_SUMMARY,
+            this.commandHandlerFactory({
+                execute: async () => {
+                    this.summaryService.requestSummary(true);
+                },
+                isEnabled: w => this.withWidget(w, () => this.isStandaloneMode && this.summaryService.hasCachedOutput,),
+                isVisible: w => this.withWidget(w, () => this.isStandaloneMode),
             }),
         );
 
@@ -158,26 +199,39 @@ export class AiTerminalAssistantContribution
         };
         const standaloneOnly = {
             isEnabled: () => this.isStandaloneMode,
+            isVisible: () => false,
             execute: redirectToAiPanel,
         };
         commands.registerHandler(TerminalCommands.NEW.id, standaloneOnly);
-        commands.registerHandler(
-            TerminalCommands.PROFILE_NEW.id,
-            standaloneOnly,
-        );
-        commands.registerHandler(
-            TerminalCommands.NEW_ACTIVE_WORKSPACE.id,
-            standaloneOnly,
-        );
+        commands.registerHandler(TerminalCommands.PROFILE_NEW.id, standaloneOnly);
+        commands.registerHandler(TerminalCommands.NEW_ACTIVE_WORKSPACE.id, standaloneOnly);
         commands.registerHandler(TerminalCommands.SPLIT.id, standaloneOnly);
     }
 
     override registerKeybindings(keybindings: KeybindingRegistry): void {
         super.registerKeybindings(keybindings);
         keybindings.registerKeybinding({
-            command: AI_TERMINAL_SUMMARY_COMMAND.id,
+            command: AiTerminalAssistantCommands.AI_TERMINAL_SUMMARY_COMMAND.id,
             keybinding: 'ctrlcmd+e',
             when: `terminalFocus && ${ENABLE_AI_CONTEXT_KEY}`,
         });
     }
+
+    registerToolbarItems(toolbar: TabBarToolbarRegistry): void {
+        toolbar.registerItem({
+            id: AiTerminalAssistantCommands.AI_TERMINAL_ASSISTANT_START_SUMMARY.id,
+            command: AiTerminalAssistantCommands.AI_TERMINAL_ASSISTANT_START_SUMMARY.id,
+            icon: AiTerminalAssistantCommands.AI_TERMINAL_ASSISTANT_START_SUMMARY.iconClass,
+            tooltip: AiTerminalAssistantCommands.AI_TERMINAL_ASSISTANT_START_SUMMARY.label,
+            onDidChange: this.onToolbarItemsChangedEmitter.event,
+        });
+        toolbar.registerItem({
+            id: AiTerminalAssistantCommands.AI_TERMINAL_ASSISTANT_RETRY_SUMMARY.id,
+            command: AiTerminalAssistantCommands.AI_TERMINAL_ASSISTANT_RETRY_SUMMARY.id,
+            icon: AiTerminalAssistantCommands.AI_TERMINAL_ASSISTANT_RETRY_SUMMARY.iconClass,
+            tooltip: AiTerminalAssistantCommands.AI_TERMINAL_ASSISTANT_RETRY_SUMMARY.label,
+            onDidChange: this.onToolbarItemsChangedEmitter.event,
+        });
+    }
+
 }
