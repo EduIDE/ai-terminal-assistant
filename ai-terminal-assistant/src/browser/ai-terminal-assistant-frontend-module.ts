@@ -30,6 +30,10 @@ import {
     SummaryServiceImpl,
     SummaryService,
 } from './ai-terminal-assistant-service';
+import {
+    HiddenTerminalService,
+    HiddenTerminalServiceImpl,
+} from './hidden-terminal-service';
 import { ErrorSourceResolutionService } from './error-source-resolution-service';
 import {
     AiTerminalAssistantCommandService,
@@ -43,6 +47,8 @@ import { bindAiTerminalAssistantPreferences } from './ai-terminal-assistant-pref
 export default new ContainerModule((bind) => {
     // Services
     bind(ErrorSourceResolutionService).toSelf().inSingletonScope();
+    bind(HiddenTerminalServiceImpl).toSelf().inSingletonScope();
+    bind(HiddenTerminalService).toService(HiddenTerminalServiceImpl);
     bind(SummaryServiceImpl).toSelf().inSingletonScope();
     bind(SummaryService).toService(SummaryServiceImpl);
 

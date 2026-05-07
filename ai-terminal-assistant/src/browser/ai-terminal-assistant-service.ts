@@ -29,23 +29,15 @@ import { TerminalWidget } from '@theia/terminal/lib/browser/base/terminal-widget
 import { TerminalWidgetImpl } from '@theia/terminal/lib/browser/terminal-widget-impl';
 import { Emitter, Event, ILogger, MessageService } from '@theia/core';
 import { DebugSessionManager } from '@theia/debug/lib/browser/debug-session-manager';
-import { Widget } from '@theia/core/lib/browser';
-import { TaskTerminalWidgetManager } from '@theia/task/lib/browser/task-terminal-widget-manager';
 import { TaskWatcher } from '@theia/task/lib/common';
 import { TaskService } from '@theia/task/lib/browser/task-service';
-import { AiTerminalAssistantPreferences } from './ai-terminal-assistant-preferences';
 import { ErrorSourceResolutionService } from './error-source-resolution-service';
-import { TerminalPreferences } from '@theia/terminal/lib/common/terminal-preferences';
+import { HiddenTerminalService } from './hidden-terminal-service';
+import { getRecentTerminalCommands, getTerminalShell } from './terminal-widget-utils';
 
 export interface SummaryRequest {
     cwd: string;
     shell: string;
-    recentTerminalContents: string[];
-}
-
-interface CachedTerminalOutput {
-    cwd: string;
-    shell: string | undefined;
     recentTerminalContents: string[];
 }
 
@@ -60,19 +52,17 @@ export interface SummaryService {
     readonly onTaskExited: Event<void>;
     readonly onCachedOutputChanged: Event<void>;
 
-    currentTerminal: TerminalWidget;
     currentSummary: Summary | undefined;
     currentErrorLines: string[];
     isTaskRunning: boolean;
+    hasCachedOutput: boolean;
 
     requestSummary(isManualReRequest?: boolean): Promise<void>;
     sendSummaryRequest(request: SummaryRequest): Promise<Summary | undefined>;
     sendSummaryRequestForLastUsedTerminal(): Promise<Summary | undefined>;
     openErrorInEditor(error: ErrorDetail): Promise<void>;
     writeToCurrentTerminal(command: string): Promise<void>;
-    logCurrentTerminalContent(): Promise<void>;
     getBufferContent(): Promise<string[]>;
-    hasCachedOutput: boolean;
 }
 
 @injectable()
@@ -89,20 +79,14 @@ export class SummaryServiceImpl implements SummaryService {
     @inject(ErrorSourceResolutionService)
     protected readonly errorSourceResolutionService: ErrorSourceResolutionService;
 
-    @inject(TaskTerminalWidgetManager)
-    protected readonly taskTerminalWidgetManager: TaskTerminalWidgetManager;
-
     @inject(TaskService)
     protected readonly taskService: TaskService;
 
     @inject(TaskWatcher)
     protected readonly taskWatcher: TaskWatcher;
 
-    @inject(AiTerminalAssistantPreferences)
-    protected readonly aiTerminalAssistantPreferences: AiTerminalAssistantPreferences;
-
-    @inject(TerminalPreferences)
-    protected readonly terminalPreferences: TerminalPreferences;
+    @inject(HiddenTerminalService)
+    protected readonly hiddenTerminalService: HiddenTerminalService;
 
     @inject(ILogger)
     protected readonly logger: ILogger;
@@ -130,24 +114,13 @@ export class SummaryServiceImpl implements SummaryService {
     protected readonly onTaskExitedEmitter = new Emitter<void>();
     readonly onTaskExited: Event<void> = this.onTaskExitedEmitter.event;
 
-    protected readonly onCurrentTerminalBufferChangedEmitter =
-        new Emitter<void>();
-    readonly onCurrentTerminalBufferChanged: Event<void> =
-        this.onCurrentTerminalBufferChangedEmitter.event;
-
-    protected readonly onCachedOutputChangedEmitter = new Emitter<void>();
-    readonly onCachedOutputChanged: Event<void> =
-        this.onCachedOutputChangedEmitter.event;
-
-    protected readonly activeTerminals = new Set<TerminalWidget>();
-
-    protected _currentTerminal: TerminalWidget;
-    get currentTerminal(): TerminalWidget {
-        return this._currentTerminal;
+    get onCurrentTerminalBufferChanged(): Event<void> {
+        return this.hiddenTerminalService.onBufferChanged;
     }
-    protected _terminalBuffer: string[] = [];
-    protected hiddenTerminalContainer: HTMLDivElement | undefined;
-    protected isTerminalVisible: boolean = false;
+
+    get onCachedOutputChanged(): Event<void> {
+        return this.hiddenTerminalService.onCachedOutputChanged;
+    }
 
     protected _currentSummary: Summary | undefined;
     get currentSummary(): Summary | undefined {
@@ -161,84 +134,44 @@ export class SummaryServiceImpl implements SummaryService {
 
     protected _summaryDebounce: ReturnType<typeof setTimeout> | undefined;
 
-    protected _isTaskRunning: boolean = false;
+    protected _isTaskRunning = false;
     get isTaskRunning(): boolean {
         return this._isTaskRunning;
     }
 
-    protected _isStandAlone: boolean;
-    protected _cachedTerminalOutput: CachedTerminalOutput | undefined;
+    get hasCachedOutput(): boolean {
+        return this.hiddenTerminalService.hasCachedOutput;
+    }
 
     @postConstruct()
     protected initialize(): void {
-        this.initializeHiddenTerminal();
-
-        this._isStandAlone =
-            this.aiTerminalAssistantPreferences['terminal.aiAssistant.mode'] ===
-            'standalone';
-
-        this.aiTerminalAssistantPreferences.onPreferenceChanged(
-            async (event) => {
-                if (event.preferenceName === 'terminal.aiAssistant.mode') {
-                    const newMode =
-                        this.aiTerminalAssistantPreferences[
-                        'terminal.aiAssistant.mode'
-                        ];
-                    this._isStandAlone = newMode === 'standalone';
-                    if (newMode === 'dedicated') {
-                        if (
-                            this.currentTerminal &&
-                            !this.currentTerminal.isDisposed
-                        ) {
-                            this.currentTerminal.dispose();
-                        }
-                        this.removeHiddenTerminalContainer();
-                    }
-                    if (newMode === 'standalone') {
-                        if (!this.hiddenTerminalContainer) {
-                            this.initializeHiddenTerminal();
-                        }
-                        if (
-                            !this.currentTerminal ||
-                            this.currentTerminal.isDisposed
-                        ) {
-                            this.createNewTerminal().catch((err) => {
-                                this.logger.error(
-                                    'Error creating terminal after mode switch:',
-                                    err,
-                                );
-                            });
-                        }
-                    }
-                }
-            },
-        );
-
-        this.debugSessionManager.onDidStartDebugSession(async () => {
+        this.debugSessionManager.onDidStartDebugSession(() => {
             this._isTaskRunning = true;
+            this.hiddenTerminalService.setTaskRunning(true);
             this.onTaskStartedEmitter.fire();
         });
 
         this.debugSessionManager.onDidDestroyDebugSession(async () => {
             this._isTaskRunning = false;
+            this.hiddenTerminalService.setTaskRunning(false);
             this.onTaskExitedEmitter.fire();
             await this.requestSummary();
-            this.createNewTerminal().catch((err) => {
+            this.hiddenTerminalService.createNewTerminal().catch((err) => {
                 this.logger.error(
-                    'Error recreating hidden terminal after task exit:',
+                    'Error recreating hidden terminal after debug session exit:',
                     err,
                 );
             });
         });
 
-        this.createNewTerminal().catch((err) => {
+        this.hiddenTerminalService.createNewTerminal().catch((err) => {
             this.logger.error('Error creating initial hidden terminal:', err);
         });
 
         this.taskWatcher.onTaskCreated(() => {
             this._isTaskRunning = true;
-            this._cachedTerminalOutput = undefined;
-            this.onCachedOutputChangedEmitter.fire();
+            this.hiddenTerminalService.setTaskRunning(true);
+            this.hiddenTerminalService.clearCachedOutput();
             this.onTaskStartedEmitter.fire();
         });
 
@@ -247,12 +180,11 @@ export class SummaryServiceImpl implements SummaryService {
             this._summaryDebounce = setTimeout(async () => {
                 const running = await this.taskService.getRunningTasks();
                 if (running.length === 0) {
-                    // request summary
                     this._isTaskRunning = false;
+                    this.hiddenTerminalService.setTaskRunning(false);
                     this.onTaskExitedEmitter.fire();
                     await this.requestSummary();
-                    // create a new terminal to have clean terminal for the next command
-                    this.createNewTerminal().catch((err) => {
+                    this.hiddenTerminalService.createNewTerminal().catch((err) => {
                         this.logger.error(
                             'Error recreating hidden terminal after task exit:',
                             err,
@@ -263,87 +195,17 @@ export class SummaryServiceImpl implements SummaryService {
         });
     }
 
-    protected initializeHiddenTerminal(): void {
-        // Initialization logic for the hidden terminal can be placed here if needed
-        // Create a hidden container for the terminal widget
-        // This allows the terminal to be attached to the DOM (required for xterm.js)
-        // while keeping it invisible to the user
-        // We use clip-path to hide the content while keeping the element "visible" for phosphor
-        this.hiddenTerminalContainer = document.createElement('div');
-        this.hiddenTerminalContainer.id = 'ai-terminal-hidden-container';
-        this.hiddenTerminalContainer.style.position = 'fixed';
-        this.hiddenTerminalContainer.style.width = '2000px';
-        this.hiddenTerminalContainer.style.height = '600px';
-        this.hiddenTerminalContainer.style.overflow = 'hidden';
-        // Use clip-path to make content invisible but keep element technically visible
-        // This ensures phosphor's isVisible check passes
-        this.hiddenTerminalContainer.style.clipPath = 'inset(100%)';
-        this.hiddenTerminalContainer.style.pointerEvents = 'none';
-        document.body.appendChild(this.hiddenTerminalContainer);
-    }
-
-    protected removeHiddenTerminalContainer(): void {
-        if (this.hiddenTerminalContainer) {
-            document.body.removeChild(this.hiddenTerminalContainer);
-            this.hiddenTerminalContainer = undefined;
-        }
-    }
-
-    async logCurrentTerminalContent(): Promise<void> {
-        const terminalContent = this.currentTerminal.buffer.getLines(
-            0,
-            this.currentTerminal.buffer.length,
-        );
-        this.logger.debug('the current terminal buffer:', terminalContent);
-        this.logger.debug('the stored terminal buffer:', this._terminalBuffer);
-    }
-
-    async getBufferContent(): Promise<string[]> {
-        const maxLines = 100;
-        return this.currentTerminal.buffer.getLines(
-            Math.max(0, this.currentTerminal.buffer.length - maxLines),
-            maxLines,
-        );
-    }
-
-    async writeToCurrentTerminal(command: string): Promise<void> {
-        if (this.currentTerminal) {
-            this.currentTerminal.sendText(command);
-            this.currentTerminal.sendText('\r');
-        } else {
-            throw new Error('No current terminal to write to.');
-        }
-    }
-
-    async openTerminal(): Promise<TerminalWidget> {
-        const terminal = await this.terminalService.newTerminal({});
-        this.terminalService.open(terminal, { mode: 'activate' });
-        await terminal.start();
-        const currentTerminalContents = terminal.buffer.getLines(
-            0,
-            terminal.buffer.length,
-        );
-        this.logger.debug(
-            'Current terminal contents:',
-            currentTerminalContents,
-        );
-        return terminal;
-    }
-
-    get hasCachedOutput(): boolean {
-        return this._cachedTerminalOutput !== undefined;
-    }
-
     async requestSummary(isManualReRequest?: boolean): Promise<void> {
         this.onSummaryRequestStartedEmitter.fire();
         this.errorSourceResolutionService.clearDecorations();
         try {
+            const { cachedOutput, isStandAlone } = this.hiddenTerminalService;
             const summary =
-                isManualReRequest && this._isStandAlone && this._cachedTerminalOutput
+                isManualReRequest && isStandAlone && cachedOutput
                     ? await this.agent.getSummary(
-                        this._cachedTerminalOutput.cwd,
-                        this._cachedTerminalOutput.recentTerminalContents,
-                        this._cachedTerminalOutput.shell,
+                        cachedOutput.cwd,
+                        cachedOutput.recentTerminalContents,
+                        cachedOutput.shell,
                     )
                     : await this.sendSummaryRequestForLastUsedTerminal();
             if (!summary) {
@@ -387,10 +249,10 @@ export class SummaryServiceImpl implements SummaryService {
             const cwd = (
                 await (lastUsedTerminal as TerminalWidgetImpl).cwd
             ).toString();
-            const shell = await this.getTerminalShell(lastUsedTerminal);
+            const shell = await getTerminalShell(lastUsedTerminal);
             const recentTerminalContents =
-                this.getRecentTerminalCommands(lastUsedTerminal);
-            this.logger.debug("terminal contents: ", recentTerminalContents);
+                getRecentTerminalCommands(lastUsedTerminal);
+            this.logger.debug('terminal contents: ', recentTerminalContents);
             return this.agent.getSummary(cwd, recentTerminalContents, shell);
         }
         throw new Error('No active terminal found.');
@@ -400,110 +262,12 @@ export class SummaryServiceImpl implements SummaryService {
         return this.errorSourceResolutionService.openErrorInEditor(error);
     }
 
-    protected getRecentTerminalCommands(terminal: TerminalWidget): string[] {
-        // TODO: impementation of fetch terminal command from last command block, enable when upstream fix is merged
-        // if (
-        //     this.terminalPreferences['terminal.integrated.enableCommandHistory']
-        // ) {
-        //     const commandHistory =
-        //         terminal.commandHistoryState?.commandHistory ?? [];
-        //     if (commandHistory.length === 0) {
-        //         return [];
-        //     }
-        //     const lastTerminalBlock = commandHistory[commandHistory.length - 1];
-        //     this.logger.debug("command: ", JSON.stringify(lastTerminalBlock));
-        //     return [
-        //         `${lastTerminalBlock.command}\n${lastTerminalBlock.output}`,
-        //     ];
-        // }
-
-        const maxLines = 100;
-        const terminalBufferLength = terminal.buffer.length;
-        return terminal.buffer.getLines(
-            Math.max(0, terminalBufferLength - maxLines),
-            Math.min(maxLines, terminalBufferLength)
-        );
+    async writeToCurrentTerminal(command: string): Promise<void> {
+        return this.hiddenTerminalService.writeToTerminal(command);
     }
 
-    // fetch shell if terminal process is still running
-    protected async getTerminalShell(
-        terminal: TerminalWidget,
-    ): Promise<string | undefined> {
-        try {
-            const processInfo = await terminal.processInfo;
-            return processInfo ? processInfo.executable : undefined;
-        } catch {
-            return undefined;
-        }
+    async getBufferContent(): Promise<string[]> {
+        return this.hiddenTerminalService.getBufferContent();
     }
 
-    protected async cacheLastTerminalOutput(): Promise<void> {
-        const lastUsedTerminal = this.terminalService.lastUsedTerminal;
-        if (!lastUsedTerminal) {
-            return;
-        }
-        try {
-            const cwd = (
-                await (lastUsedTerminal as TerminalWidgetImpl).cwd
-            ).toString();
-            const shell = await this.getTerminalShell(lastUsedTerminal);
-            const recentTerminalContents =
-                this.getRecentTerminalCommands(lastUsedTerminal);
-            this._cachedTerminalOutput = { cwd, shell, recentTerminalContents };
-            this.onCachedOutputChangedEmitter.fire();
-        } catch (err) {
-            this.logger.warn('Failed to cache terminal output:', err);
-        }
-    }
-
-    protected async createNewTerminal(): Promise<void> {
-        // Capture terminal state before disposal so manual re-requests can use it
-        if (this._isStandAlone) {
-            await this.cacheLastTerminalOutput();
-        }
-        // Dispose previous terminal if exists
-        if (this.currentTerminal && !this.currentTerminal.isDisposed) {
-            this.currentTerminal.dispose();
-        }
-        this._terminalBuffer = [];
-
-        if (!this._isStandAlone) {
-            return;
-        }
-
-        this._currentTerminal = await this.terminalService.newTerminal({
-            title: 'Hidden TaskTerminal',
-            destroyTermOnClose: true,
-            kind: 'task',
-            hideFromUser: true,
-            isTransient: true,
-        });
-
-        // Set up output listener BEFORE starting to catch early output
-        this.currentTerminal.onOutput((output) => {
-            if (this._isTaskRunning) {
-                const lines = this.currentTerminal.buffer.getLines(
-                    0,
-                    this.currentTerminal.buffer.length,
-                );
-                this._terminalBuffer = lines.reverse();
-                this.onCurrentTerminalBufferChangedEmitter.fire();
-            }
-        });
-
-        // Attach terminal to hidden container instead of using terminalService.open()
-        // This allows xterm.js to initialize without showing the terminal to the user
-        if (this.hiddenTerminalContainer) {
-            Widget.attach(this.currentTerminal, this.hiddenTerminalContainer);
-        }
-
-        // Start the terminal process - this will also trigger onDidOpen when connected
-        await this.currentTerminal.start();
-
-        // This calls open() internally which sets termOpened=true, enabling onOutput events
-        this.currentTerminal.update();
-
-        // Wait a tick to ensure xterm.js is initialized after update
-        await new Promise<void>((resolve) => setTimeout(resolve, 100));
-    }
 }
