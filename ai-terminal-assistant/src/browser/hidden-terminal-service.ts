@@ -94,11 +94,11 @@ export class HiddenTerminalServiceImpl implements HiddenTerminalService {
     @postConstruct()
     protected initialize(): void {
         this._isStandAlone =
-            this.preferences['terminal.aiAssistant.mode'] === 'standalone';
+            this.preferences['ai-features.ai-terminal-assistant.mode'] === 'standalone';
 
         this.preferences.onPreferenceChanged((event) => {
-            if (event.preferenceName === 'terminal.aiAssistant.mode') {
-                const newMode = this.preferences['terminal.aiAssistant.mode'];
+            if (event.preferenceName === 'ai-features.ai-terminal-assistant.mode') {
+                const newMode = this.preferences['ai-features.ai-terminal-assistant.mode'];
                 this._isStandAlone = newMode === 'standalone';
                 if (newMode === 'dedicated') {
                     if (this._currentTerminal && !this._currentTerminal.isDisposed) {

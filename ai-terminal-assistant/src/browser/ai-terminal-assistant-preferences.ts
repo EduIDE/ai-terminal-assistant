@@ -24,7 +24,7 @@ import {
 } from '@theia/core';
 import { interfaces } from '@theia/core/shared/inversify';
 
-export const ASSISTANT_MODE_PREF = 'terminal.aiAssistant.mode';
+export const ASSISTANT_MODE_PREF = 'ai-features.ai-terminal-assistant.mode';
 
 export const AiTerminalAssistantPreferenceSchema: PreferenceSchema = {
     properties: {
@@ -55,7 +55,7 @@ export const AiTerminalAssistantPreferenceContribution = {
 };
 
 export interface AiTerminalAssistantConfiguration {
-    'terminal.aiAssistant.mode': 'standalone' | 'dedicated';
+    'ai-features.ai-terminal-assistant.mode': 'standalone' | 'dedicated';
 }
 
 export type AiTerminalAssistantPreferences =

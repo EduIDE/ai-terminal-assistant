@@ -138,7 +138,7 @@ export class AiTerminalAssistantContribution
     }
 
     protected get isStandaloneMode(): boolean {
-        return this.preferences['terminal.aiAssistant.mode'] === 'standalone';
+        return this.preferences['ai-features.ai-terminal-assistant.mode'] === 'standalone';
     }
 
     protected withWidget<T>(widget: Widget | undefined, fn: (widget: AiTerminalAssistantViewWidget) => T): T | false {

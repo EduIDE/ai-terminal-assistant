@@ -25,7 +25,6 @@ import {
     Summary,
 } from './terminal-output-analysis-agent';
 import { TerminalService } from '@theia/terminal/lib/browser/base/terminal-service';
-import { TerminalWidget } from '@theia/terminal/lib/browser/base/terminal-widget';
 import { TerminalWidgetImpl } from '@theia/terminal/lib/browser/terminal-widget-impl';
 import { Emitter, Event, ILogger, MessageService } from '@theia/core';
 import { DebugSessionManager } from '@theia/debug/lib/browser/debug-session-manager';
