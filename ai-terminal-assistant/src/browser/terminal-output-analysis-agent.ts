@@ -30,33 +30,43 @@ import { inject, injectable } from '@theia/core/shared/inversify';
 import { z } from 'zod';
 import zodToJsonSchema from 'zod-to-json-schema';
 
-const ErrorLines = z.object({
-    errorLines: z.array(z.string()),
-    errorLinesStart: z.number(),
-});
-export type ErrorLines = z.infer<typeof ErrorLines>;
+export class NoLanguageModelError extends Error {
+    constructor() {
+        super('No AI provider configured for the AI Terminal Agent.');
+        this.name = 'NoLanguageModelError';
+    }
+}
+
+export interface ErrorLines {
+    errorLines: string[];
+    errorLinesStart: number;
+}
 const ExplanationStep = z.object({
     label: z.string(),
     text: z.string(),
 });
 export type ExplanationStep = z.infer<typeof ExplanationStep>;
-const ErrorDetail = z.object({
+const ErrorDetailAI = z.object({
     category: z.string(),
     type: z.string(),
     file: z.string().optional(),
     line: z.number().optional(),
     column: z.number().optional(),
-    errorLines: ErrorLines.optional(),
     explanationSteps: z.array(ExplanationStep),
     fixSteps: z.array(z.string()),
 });
-export type ErrorDetail = z.infer<typeof ErrorDetail>;
-const Summary = z.object({
+// ErrorDetail extends the AI output with errorLines, populated post-hoc by ErrorSourceResolutionService
+export type ErrorDetail = z.infer<typeof ErrorDetailAI> & {
+    errorLines?: ErrorLines;
+};
+const SummaryAI = z.object({
     isSuccessful: z.boolean(),
     outputSummary: z.string(),
-    errors: z.array(ErrorDetail),
+    errors: z.array(ErrorDetailAI),
 });
-export type Summary = z.infer<typeof Summary>;
+export type Summary = z.infer<typeof SummaryAI> & {
+    errors: ErrorDetail[];
+};
 
 @injectable()
 export class AiTerminalSummaryAgent implements Agent {
@@ -125,10 +135,7 @@ export class AiTerminalSummaryAgent implements Agent {
             ...this.languageModelRequirements[0],
         });
         if (!lm) {
-            this.logger.error(
-                'No language model available for the AI Terminal Agent.',
-            );
-            return undefined;
+            throw new NoLanguageModelError();
         }
 
         const parameters = {
@@ -172,7 +179,7 @@ export class AiTerminalSummaryAgent implements Agent {
                     name: 'terminal-output-summary',
                     description:
                         'Structured summary of terminal output commands',
-                    schema: zodToJsonSchema(Summary as any),
+                    schema: zodToJsonSchema(SummaryAI),
                 },
             },
             agentId: this.id,
@@ -188,7 +195,7 @@ export class AiTerminalSummaryAgent implements Agent {
 
             if (isLanguageModelParsedResponse(result)) {
                 // model returned structured output
-                const parsedResult = Summary.safeParse(result.parsed);
+                const parsedResult = SummaryAI.safeParse(result.parsed);
                 if (parsedResult.success) {
                     return parsedResult.data;
                 }
@@ -196,7 +203,7 @@ export class AiTerminalSummaryAgent implements Agent {
 
             // fall back to agent-based parsing of result
             const jsonResult = await getJsonOfResponse(result);
-            const parsedJsonResult = Summary.safeParse(jsonResult);
+            const parsedJsonResult = SummaryAI.safeParse(jsonResult);
             if (parsedJsonResult.success) {
                 return parsedJsonResult.data;
             }

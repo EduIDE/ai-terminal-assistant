@@ -157,10 +157,8 @@ cwd: "/home/user/project"
   "outputSummary": "The command \`ech hello world\` failed to execute. This command is used to print text to the terminal.",
   "errors": [
     {
-        "type": "Other error: command not found",
-        "terminalErrorExcerpt": [
-          "command not found: ech"
-        ],
+        "category": "Environment error",
+        "type": "CommandNotFound",
         "explanationSteps": [
           {"label": "What", "text": "The shell cannot find a program named \`ech\` in any directory listed in your system's PATH."},
           {"label": "Why", "text": "When you type a command, the shell searches specific directories for an executable with that name.
@@ -221,13 +219,6 @@ cwd: "/home/user/project/bar"
       "type": "IndexOutOfBoundsException",
       "file": "Client.java",
       "line": 41,
-      "terminalErrorExcerpt": [
-        "Exception in thread \\"main\\" java.lang.IndexOutOfBoundsException: Index 8 out of bounds for length 8",
-        "        at java.base/java.util.ArrayList.get(ArrayList.java:427)",
-        "        at de.BubbleSort.performSort(BubbleSort.java:17)",
-        "        at de.Context.sort(Context.java:31)",
-        "        at de.Client.main(Client.java:41)"
-      ],
       "explanationSteps": [
         {"label": "What", "text": "You tried to access position 8 in a list that only has 8 elements (positions 0-7)."},
         {"label": "Why", "text": "Java array and list indexes start at 0, not 1,
@@ -268,12 +259,6 @@ cwd: "/home/user/project/bar"
       "type": "Syntax error",
       "file": "Client.java",
       "line": 36,
-      "terminalErrorExcerpt": [
-        "Exception in thread \\"main\\" java.lang.Error: Unresolved compilation problem:",
-        "        Syntax error, insert \\")\\" to complete Expression",
-        "        at de.Policy.configure(Policy.java:22)",
-        "        at de.Client.main(Client.java:36)"
-      ],
       "explanationSteps": [
         {"label": "What", "text": "Your code is missing a closing parenthesis \`)\` - every opening \`(\` must have a matching closing \`)\`."},
         {"label": "Why", "text": "This is like forgetting to close a bracket in math: 2 * (3 + 4 is invalid because it's incomplete.
