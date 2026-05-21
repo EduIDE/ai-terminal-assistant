@@ -21,9 +21,10 @@ import { CommandService, PreferenceService } from '@theia/core';
 import { SummaryViewWidget } from './ai-terminal-assistant-summary-widget';
 import { AiTerminalBufferWidget } from './ai-terminal-assistant-buffer-widget';
 import { Summary } from './terminal-output-analysis-agent';
-import { inject, postConstruct } from '@theia/core/shared/inversify';
+import { inject, injectable, postConstruct } from '@theia/core/shared/inversify';
 import { AiTerminalAssistantPreferences } from './ai-terminal-assistant-preferences';
 
+@injectable()
 export class AiTerminalAssistantViewWidget extends BaseWidget {
     static readonly ID = 'ai-terminal-assistant-view';
     static readonly LABEL = 'AI Terminal Assistant';
@@ -73,9 +74,7 @@ export class AiTerminalAssistantViewWidget extends BaseWidget {
             this.aiTerminalBufferWidget,
         ]);
 
-        this._isStandAlone =
-            this.aiTerminalAssistantPreferences['ai-features.ai-terminal-assistant.mode'] ===
-            'standalone';
+        this._isStandAlone = this.summaryService.isStandAlone;
 
         this.update();
         const layout = (this.layout = new PanelLayout());
@@ -96,10 +95,7 @@ export class AiTerminalAssistantViewWidget extends BaseWidget {
         this.toDispose.push(
             this.aiTerminalAssistantPreferences.onPreferenceChanged((event) => {
                 if (event.preferenceName === 'ai-features.ai-terminal-assistant.mode') {
-                    this._isStandAlone =
-                        this.aiTerminalAssistantPreferences[
-                        'ai-features.ai-terminal-assistant.mode'
-                        ] === 'standalone';
+                    this._isStandAlone = this.summaryService.isStandAlone;
                     this.update();
                 }
             }),
