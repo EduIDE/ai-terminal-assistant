@@ -17,6 +17,7 @@ import {
     inject,
     injectable,
     postConstruct,
+    preDestroy,
 } from '@theia/core/shared/inversify';
 import {
     AiTerminalSummaryAgent,
@@ -55,6 +56,7 @@ export interface SummaryService {
     currentErrorLines: string[];
     isTaskRunning: boolean;
     hasCachedOutput: boolean;
+    isStandAlone: boolean;
 
     requestSummary(isManualReRequest?: boolean): Promise<void>;
     sendSummaryRequest(request: SummaryRequest): Promise<Summary | undefined>;
@@ -132,6 +134,7 @@ export class SummaryServiceImpl implements SummaryService {
     }
 
     protected _summaryDebounce: ReturnType<typeof setTimeout> | undefined;
+    protected _isRequestInFlight = false;
 
     protected _isTaskRunning = false;
     get isTaskRunning(): boolean {
@@ -140,6 +143,15 @@ export class SummaryServiceImpl implements SummaryService {
 
     get hasCachedOutput(): boolean {
         return this.hiddenTerminalService.hasCachedOutput;
+    }
+
+    get isStandAlone(): boolean {
+        return this.hiddenTerminalService.isStandAlone;
+    }
+
+    @preDestroy()
+    protected dispose(): void {
+        clearTimeout(this._summaryDebounce);
     }
 
     @postConstruct()
@@ -195,6 +207,10 @@ export class SummaryServiceImpl implements SummaryService {
     }
 
     async requestSummary(isManualReRequest?: boolean): Promise<void> {
+        if (this._isRequestInFlight) {
+            return;
+        }
+        this._isRequestInFlight = true;
         this.onSummaryRequestStartedEmitter.fire();
         this.errorSourceResolutionService.clearDecorations();
         try {
@@ -229,8 +245,10 @@ export class SummaryServiceImpl implements SummaryService {
             }
             this.logger.error('Error requesting terminal summary:', error);
             this._currentSummary = undefined;
+        } finally {
+            this._isRequestInFlight = false;
+            this.onSummaryRequestFinishedEmitter.fire(this.currentSummary);
         }
-        this.onSummaryRequestFinishedEmitter.fire(this.currentSummary);
     }
 
     async sendSummaryRequest(
