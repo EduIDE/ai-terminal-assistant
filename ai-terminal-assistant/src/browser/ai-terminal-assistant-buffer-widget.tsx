@@ -116,7 +116,7 @@ function useTerminalBuffer(summaryService: SummaryService): {
 
     const fetchBuffer = React.useCallback(async () => {
         const bufferContent = await summaryService.getBufferContent();
-        setBuffer(bufferContent.reverse().filter((line) => line.trim() !== ''));
+        setBuffer([...bufferContent].reverse().filter((line) => line.trim() !== ''));
     }, [summaryService]);
 
     React.useEffect(() => {

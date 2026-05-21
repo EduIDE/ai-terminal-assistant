@@ -32,7 +32,7 @@ import {
 import { AiTerminalAssistantCommandService } from './ai-terminal-assistant-command-service';
 import { MarkdownRenderer } from '@theia/core/lib/browser/markdown-rendering/markdown-renderer';
 import { MarkdownStringImpl } from '@theia/core/lib/common/markdown-rendering';
-import { Command } from '@theia/core';
+import { Command, ILogger } from '@theia/core';
 
 /**
  * State interface for persisting widget state between sessions.
@@ -66,6 +66,9 @@ export class SummaryViewWidget extends ReactWidget implements StatefulWidget {
 
     @inject(MarkdownRenderer)
     protected readonly markdownRenderer: MarkdownRenderer;
+
+    @inject(ILogger)
+    protected readonly logger: ILogger;
 
     protected isEnabled: boolean = false;
     protected lastSummary?: Summary;
@@ -126,12 +129,17 @@ export class SummaryViewWidget extends ReactWidget implements StatefulWidget {
                 commandService={this.commandService}
                 markdownRenderer={this.markdownRenderer}
                 onSummaryChange={this.handleSummaryChange}
+                onError={this.handleError}
             />
         );
     }
 
     protected handleSummaryChange = (summary: Summary | undefined): void => {
         this.lastSummary = summary;
+    };
+
+    protected handleError = (error: unknown): void => {
+        this.logger.error('Error fetching terminal summary:', String(error));
     };
 }
 
@@ -140,6 +148,7 @@ interface TerminalOutputSummaryProps {
     commandService: AiTerminalAssistantCommandService;
     markdownRenderer: MarkdownRenderer;
     onSummaryChange?: (summary: Summary | undefined) => void;
+    onError?: (error: unknown) => void;
 }
 
 interface ErrorOverviewProps {
@@ -184,10 +193,12 @@ const TerminalOutputSummary: React.FunctionComponent<
     commandService,
     markdownRenderer,
     onSummaryChange,
+    onError,
 }: TerminalOutputSummaryProps) => {
         const { loading, summary } = useSummaryData(
             summaryService,
             onSummaryChange,
+            onError,
         );
 
         const handleOpenError = React.useCallback(
@@ -220,7 +231,7 @@ const TerminalOutputSummary: React.FunctionComponent<
 
         return (
             <div
-                className={`summary-view-container${isWelcome ? ' welcome-state' : ''}`}
+                className={`summary-view-container${isWelcome ? ' welcome-state' : ''}${loading ? ' loading-state' : ''}`}
             >
                 {loading ? (
                     <div className='summary-loading'>
@@ -230,7 +241,9 @@ const TerminalOutputSummary: React.FunctionComponent<
                         <span>Analyzing terminal output...</span>
                     </div>
                 ) : summary ? (
-                    <div className='ai-summary-container'>
+                    <div
+                        className='ai-summary-container'
+                    >
                         <div className='ai-summary-header'>
                             <BuildResultOverview
                                 summary={summary}
@@ -266,7 +279,7 @@ const BuildResultOverview: React.FunctionComponent<
     const successIcon = codicon('pass');
 
     const isSuccessful = summary.isSuccessful;
-    const statusText = isSuccessful ? 'Build successful' : 'Build failed';
+    const statusText = isSuccessful ? 'Execution Successful' : 'Execution Unsuccessful';
     const statusIcon = isSuccessful ? successIcon : errorIcon;
 
     return (
@@ -393,7 +406,6 @@ const ErrorDetailBody: React.FunctionComponent<ErrorDetailBodyProps> = ({
                         )}
                 </div>
                 <div className='error-detail-field'>
-                    {/* <span className='error-detail-subheader'>Description:</span> */}
                     <ul className='error-explanation-steps'>
                         {errorDetail.explanationSteps.map(
                             (step: ExplanationStep, idx) => (
@@ -464,7 +476,7 @@ const OpenErrorInEditorButton: React.FunctionComponent<{
 }> = ({ onOpenError }: { onOpenError: () => void }) => {
     const goToFileIcon = codicon('go-to-file');
     return (
-        <button className='theia-button secondary' onClick={onOpenError}>
+        <button className='theia-button secondary' onClick={onOpenError} aria-label='Open error in editor'>
             <div className='ai-terminal-icon-button'>
                 <div className={goToFileIcon} />
                 Edit File
@@ -490,6 +502,7 @@ const AddOnButtons: React.FunctionComponent<AddOnButtonsProps> = ({
                     key={command.id}
                     className='theia-button secondary'
                     onClick={() => onExecuteCommand(command.id, error)}
+                    aria-label={command.label}
                 >
                     <div className='ai-terminal-icon-button'>
                         <div className={chatSparkleIcon} />
@@ -554,6 +567,7 @@ const Markdown: React.FunctionComponent<{
 function useSummaryData(
     summaryService: SummaryService,
     onSummaryChange?: (summary: Summary | undefined) => void,
+    onError?: (error: unknown) => void,
 ): {
     summary: Summary | undefined;
     loading: boolean;
@@ -579,12 +593,12 @@ function useSummaryData(
             setSummary(newSummary);
             onSummaryChange?.(newSummary);
         } catch (error) {
-            console.error('Error fetching terminal summary:', error);
+            onError?.(error);
         } finally {
             loadingRef.current = false;
             setLoading(false);
         }
-    }, [summaryService, onSummaryChange]);
+    }, [summaryService, onSummaryChange, onError]);
 
     React.useEffect(() => {
         const dispose = summaryService.onSummaryRequestStarted(
