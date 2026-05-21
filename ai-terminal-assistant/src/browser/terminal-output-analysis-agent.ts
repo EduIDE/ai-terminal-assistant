@@ -137,84 +137,70 @@ export class AiTerminalSummaryAgent implements Agent {
         if (!lm) {
             throw new NoLanguageModelError();
         }
-
-        const parameters = {
-            cwd,
-            recentTerminalContents,
-            shell,
-        };
-
-        const systemMessage = await this.promptService
-            .getResolvedPromptFragment('terminal-summary-system', parameters)
-            .then((p) => p?.text);
-        const request = await this.promptService
-            .getResolvedPromptFragment('terminal-summary-user', parameters)
-            .then((p) => p?.text);
-        if (!systemMessage || !request) {
-            this.logger.error(
-                "The prompt service didn't return prompts for the AI Terminal Agent.",
-            );
+        const prompts = await this.resolvePrompts({ cwd, recentTerminalContents, shell });
+        if (!prompts) {
             return undefined;
         }
-
-        // since we do not actually hold complete conversions, the request/response pair is considered a session
-        const sessionId = generateUuid();
-        const requestId = generateUuid();
-        const llmRequest: UserRequest = {
-            messages: [
-                {
-                    actor: 'ai',
-                    type: 'text',
-                    text: systemMessage,
-                },
-                {
-                    actor: 'user',
-                    type: 'text',
-                    text: request,
-                },
-            ],
-            response_format: {
-                type: 'json_schema',
-                json_schema: {
-                    name: 'terminal-output-summary',
-                    description:
-                        'Structured summary of terminal output commands',
-                    schema: zodToJsonSchema(SummaryAI),
-                },
-            },
-            agentId: this.id,
-            requestId,
-            sessionId,
-        };
-
         try {
             const result = await this.languageModelService.sendRequest(
                 lm,
-                llmRequest,
+                this.buildLlmRequest(prompts.systemMessage, prompts.userRequest),
             );
-
             if (isLanguageModelParsedResponse(result)) {
-                // model returned structured output
                 const parsedResult = SummaryAI.safeParse(result.parsed);
                 if (parsedResult.success) {
                     return parsedResult.data;
                 }
             }
-
-            // fall back to agent-based parsing of result
             const jsonResult = await getJsonOfResponse(result);
             const parsedJsonResult = SummaryAI.safeParse(jsonResult);
-            if (parsedJsonResult.success) {
-                return parsedJsonResult.data;
-            }
-
-            return undefined;
+            return parsedJsonResult.success ? parsedJsonResult.data : undefined;
         } catch (error) {
+            this.logger.error('Error obtaining the command output summary.', error);
+            return undefined;
+        }
+    }
+
+    protected async resolvePrompts(parameters: {
+        cwd: string;
+        recentTerminalContents: string[];
+        shell: string | undefined;
+    }): Promise<{ systemMessage: string; userRequest: string } | undefined> {
+        const systemMessage = await this.promptService
+            .getResolvedPromptFragment('terminal-summary-system', parameters)
+            .then((p) => p?.text);
+        const userRequest = await this.promptService
+            .getResolvedPromptFragment('terminal-summary-user', parameters)
+            .then((p) => p?.text);
+        if (!systemMessage || !userRequest) {
             this.logger.error(
-                'Error obtaining the command output summary.',
-                error,
+                "The prompt service didn't return prompts for the AI Terminal Agent.",
             );
             return undefined;
         }
+        return { systemMessage, userRequest };
+    }
+
+    protected buildLlmRequest(
+        systemMessage: string,
+        userRequest: string,
+    ): UserRequest {
+        return {
+            messages: [
+                { actor: 'ai', type: 'text', text: systemMessage },
+                { actor: 'user', type: 'text', text: userRequest },
+            ],
+            response_format: {
+                type: 'json_schema',
+                json_schema: {
+                    name: 'terminal-output-summary',
+                    description: 'Structured summary of terminal output commands',
+                    schema: zodToJsonSchema(SummaryAI),
+                },
+            },
+            agentId: this.id,
+            requestId: generateUuid(),
+            sessionId: generateUuid(),
+        };
     }
 }
