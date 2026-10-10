@@ -34,6 +34,10 @@ import { TaskService } from '@theia/task/lib/browser/task-service';
 import { ErrorSourceResolutionService } from './error-source-resolution-service';
 import { HiddenTerminalService } from './hidden-terminal-service';
 import { getRecentTerminalCommands, getTerminalShell } from './terminal-widget-utils';
+import {
+    AiTerminalAssistantPreferences,
+    ASSISTANT_ENABLED_PREF,
+} from './ai-terminal-assistant-preferences';
 
 export interface SummaryRequest {
     cwd: string;
@@ -94,6 +98,13 @@ export class SummaryServiceImpl implements SummaryService {
 
     @inject(MessageService)
     protected readonly messageService: MessageService;
+
+    @inject(AiTerminalAssistantPreferences)
+    protected readonly preferences: AiTerminalAssistantPreferences;
+
+    protected get autoEgressEnabled(): boolean {
+        return this.preferences[ASSISTANT_ENABLED_PREF] === true;
+    }
 
     protected readonly onAllTerminalsClosedEmitter = new Emitter<void>();
     readonly onAllTerminalsClosed: Event<void> =
@@ -166,7 +177,9 @@ export class SummaryServiceImpl implements SummaryService {
             this._isTaskRunning = false;
             this.hiddenTerminalService.setTaskRunning(false);
             this.onTaskExitedEmitter.fire();
-            await this.requestSummary();
+            if (this.autoEgressEnabled) {
+                await this.requestSummary();
+            }
             this.hiddenTerminalService.createNewTerminal().catch((err) => {
                 this.logger.error(
                     'Error recreating hidden terminal after debug session exit:',
@@ -194,7 +207,9 @@ export class SummaryServiceImpl implements SummaryService {
                     this._isTaskRunning = false;
                     this.hiddenTerminalService.setTaskRunning(false);
                     this.onTaskExitedEmitter.fire();
-                    await this.requestSummary();
+                    if (this.autoEgressEnabled) {
+                        await this.requestSummary();
+                    }
                     this.hiddenTerminalService.createNewTerminal().catch((err) => {
                         this.logger.error(
                             'Error recreating hidden terminal after task exit:',

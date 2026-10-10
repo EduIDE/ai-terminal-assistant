@@ -25,9 +25,19 @@ import {
 import { interfaces } from '@theia/core/shared/inversify';
 
 export const ASSISTANT_MODE_PREF = 'ai-features.ai-terminal-assistant.mode';
+export const ASSISTANT_ENABLED_PREF = 'ai-features.ai-terminal-assistant.enabled';
 
 export const AiTerminalAssistantPreferenceSchema: PreferenceSchema = {
     properties: {
+        [ASSISTANT_ENABLED_PREF]: {
+            type: 'boolean',
+            default: false,
+            description: nls.localize(
+                'theia/ai/aiTerminalAssistant/enabled',
+                'Allow the AI Terminal Assistant to automatically send terminal output, the current working directory and the shell to the configured language model when a task or debug session exits. '
+                + 'This is off by default because terminal output can contain secrets. When off, the assistant stays available but never sends terminal content on its own.',
+            ),
+        },
         [ASSISTANT_MODE_PREF]: {
             type: 'string',
             enum: ['standalone', 'dedicated'],
@@ -56,6 +66,7 @@ export const AiTerminalAssistantPreferenceContribution = {
 
 export interface AiTerminalAssistantConfiguration {
     'ai-features.ai-terminal-assistant.mode': 'standalone' | 'dedicated';
+    'ai-features.ai-terminal-assistant.enabled': boolean;
 }
 
 export type AiTerminalAssistantPreferences =

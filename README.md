@@ -12,6 +12,13 @@ AI Terminal Theia extensions for the EduIDE
    - Summarize terminal output with ai assistance
    - Provide remediation steps in case of an error
 
+## Privacy: terminal content egress
+
+The assistant can send recent terminal output, the current working directory and the shell to the configured language model. Because terminal output can contain secrets, this is **off by default**.
+
+- Set `ai-features.ai-terminal-assistant.enabled` to `true` to allow the assistant to automatically send terminal content when a task or debug session exits. When off, the assistant stays available but never sends terminal content on its own.
+- Regardless of the setting, captured output is scrubbed before it leaves the IDE: lines that look like secrets (`*_TOKEN`, `*_SECRET`, `*_KEY`, `PASSWORD`, `Authorization:` headers, `Bearer` tokens, AWS-style access keys and `.env`-style `KEY=VALUE` pairs) have their values replaced with `[REDACTED]`.
+
 ## Getting started
 
 Please install all necessary [prerequisites](https://github.com/eclipse-theia/theia/blob/master/doc/Developing.md#prerequisites).
