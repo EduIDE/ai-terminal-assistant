@@ -51,6 +51,11 @@ const BEARER_TOKEN = /(bearer\s+)\S+/gi;
 // Matches AWS-style access key IDs, e.g. AKIAIOSFODNN7EXAMPLE.
 const AWS_ACCESS_KEY_ID = /\b(?:AKIA|ASIA|AGPA|AIDA|AROA|ANPA|AIPA)[0-9A-Z]{12,}\b/g;
 
+// Matches credentials embedded in a connection URL, e.g. postgres://user:password@host/db or
+// redis://:password@host. The key name (DATABASE_URL, REDIS_URL, ...) does not look like a secret,
+// so SECRET_ASSIGNMENT does not fire; this redacts the password portion wherever such a URL appears.
+const URL_CREDENTIALS = /([a-z][a-z0-9+.-]*:\/\/[^\s:/@]*:)([^\s/@]+)(@)/gi;
+
 /**
  * Redacts obvious secrets from captured terminal lines before they are sent to a language model.
  * Operates line by line and preserves the surrounding text so the summary stays useful.
@@ -70,6 +75,10 @@ function redactSecretsFromLine(line: string): string {
     );
     result = result.replace(BEARER_TOKEN, (_match, prefix) => `${prefix}${SECRET_REDACTION_PLACEHOLDER}`);
     result = result.replace(AWS_ACCESS_KEY_ID, SECRET_REDACTION_PLACEHOLDER);
+    result = result.replace(
+        URL_CREDENTIALS,
+        (_match, prefix, _password, suffix) => `${prefix}${SECRET_REDACTION_PLACEHOLDER}${suffix}`,
+    );
     return result;
 }
 

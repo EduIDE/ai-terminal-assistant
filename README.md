@@ -17,7 +17,7 @@ AI Terminal Theia extensions for the EduIDE
 The assistant can send recent terminal output, the current working directory and the shell to the configured language model. Because terminal output can contain secrets, this is **off by default**.
 
 - Set `ai-features.ai-terminal-assistant.enabled` to `true` to allow the assistant to automatically send terminal content when a task or debug session exits. When off, the assistant stays available but never sends terminal content on its own.
-- Regardless of the setting, captured output is scrubbed before it leaves the IDE: lines that look like secrets (`*_TOKEN`, `*_SECRET`, `*_KEY`, `PASSWORD`, `Authorization:` headers, `Bearer` tokens, AWS-style access keys and `.env`-style `KEY=VALUE` pairs) have their values replaced with `[REDACTED]`.
+- Regardless of the setting, captured output is scrubbed before it leaves the IDE: values are replaced with `[REDACTED]` for assignments whose key looks like a secret (for example `*_TOKEN`, `*_SECRET`, `*_KEY`, `*PASSWORD`, `*AUTH*`, `*CREDENTIALS*`), `Authorization:` headers, `Bearer` tokens, AWS-style access keys and credentials embedded in connection URLs (for example `postgres://user:password@host`). Assignments with a non-secret-looking key (such as plain `FOO=bar`) are left intact so the summary stays useful.
 
 ## Getting started
 
