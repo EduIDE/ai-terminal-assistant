@@ -38,8 +38,9 @@ export function getRecentTerminalCommands(terminal: TerminalWidget): string[] {
 export const SECRET_REDACTION_PLACEHOLDER = '[REDACTED]';
 
 // Matches KEY=VALUE / KEY: VALUE pairs where the key name looks like a secret.
-// Covers typical `.env` contents and `env` output, e.g. GITHUB_TOKEN=..., AWS_SECRET_ACCESS_KEY=..., DB_PASSWORD=..., MY_API_KEY=...
-const SECRET_ASSIGNMENT = /(^|\s|export\s+)([A-Za-z0-9_.-]*(?:TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIALS?|API[_-]?KEY|ACCESS[_-]?KEY|PRIVATE[_-]?KEY)[A-Za-z0-9_.-]*|[A-Za-z0-9_.-]+_KEY)(\s*[=:]\s*)(\S.*)$/i;
+// Covers typical `.env` contents and `env` output, e.g. GITHUB_TOKEN=..., AWS_SECRET_ACCESS_KEY=..., DB_PASSWORD=..., MY_API_KEY=..., SSH_AUTH_SOCK=..., DOCKER_AUTH_CONFIG=...
+// Also handles quoted arguments and JSON-style keys, e.g. "DB_PASSWORD": "..." or 'token=...'.
+const SECRET_ASSIGNMENT = /(^|\s|export\s+|["'])([A-Za-z0-9_.-]*(?:TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIALS?|AUTH|API[_-]?KEY|ACCESS[_-]?KEY|PRIVATE[_-]?KEY)[A-Za-z0-9_.-]*|[A-Za-z0-9_.-]+_KEY)(["']?\s*[=:]\s*)(\S.*)$/i;
 
 // Matches HTTP Authorization headers, e.g. "Authorization: Basic ...".
 const AUTHORIZATION_HEADER = /(authorization\s*:\s*)(\S.*)$/i;
