@@ -19,5 +19,16 @@
   },
   "workspaces": [
      "browser-app", "electron-app", "ai-terminal-assistant"
-  ]
+  ],
+  "overrides": {
+    "electron": "39.8.10",
+    "dompurify": "^3.4.17",
+    "dot-prop@<4.2.1": "^4.2.1",
+    "minimist@<0.2.4": "^0.2.4",
+    "qs": "^6.16.0",
+    "serialize-javascript": "^7.0.5",
+    "tmp@<0.2.6": "^0.2.6",
+    "yargs-parser@<13.1.2": "^13.1.2",
+    "webpack": "~5.107.2"
+  }
 }
