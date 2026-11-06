@@ -26,6 +26,7 @@ import {
 } from '@theia/ai-core/lib/common';
 import { generateUuid, ILogger, nls } from '@theia/core';
 import { terminalPrompts } from './ai-terminal-assistant-prompt-template';
+import { redactSecrets } from './terminal-widget-utils';
 import { inject, injectable } from '@theia/core/shared/inversify';
 import { z } from 'zod';
 import zodToJsonSchema from 'zod-to-json-schema';
@@ -130,6 +131,8 @@ export class AiTerminalSummaryAgent implements Agent {
         recentTerminalContents: string[],
         shell?: string,
     ): Promise<Summary | undefined> {
+        // Scrub obvious secrets from the captured buffer before anything leaves the IDE.
+        recentTerminalContents = redactSecrets(recentTerminalContents);
         const lm = await this.languageModelRegistry.selectLanguageModel({
             agent: this.id,
             ...this.languageModelRequirements[0],
